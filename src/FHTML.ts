@@ -1,5 +1,4 @@
 
-import { BristolBoard } from './BristolImports'
 
 export class FHTML<TYPE extends HTMLElement> {
     offset() {
@@ -33,7 +32,7 @@ export class FHTML<TYPE extends HTMLElement> {
 
 
     }
-    append(canvas: FHTML<HTMLCanvasElement>) {
+    append(canvas: FHTML<any>) {
         this.element.append(canvas.element);
     }
     getCss(name: string): string {
@@ -51,25 +50,29 @@ export class FHTML<TYPE extends HTMLElement> {
         return this.createChildElem<"div">(id, "div");
     }
     createChildElem<FreshType extends keyof HTMLElementTagNameMap>(id: string, tagType: FreshType): FHTML<HTMLElementTagNameMap[FreshType]> {
+        let output: FHTML<HTMLElementTagNameMap[FreshType]> = FHTML.CreateElement(tagType);
+        output.attr("id", id);
+        this.element.appendChild(output.element);
+        return output;
+    }
+    static CreateElement<FreshType extends keyof HTMLElementTagNameMap>(tagType: FreshType): FHTML<HTMLElementTagNameMap[FreshType]> {
         let elem: HTMLElementTagNameMap[FreshType] = document.createElement<FreshType>(tagType);
         let output: FHTML<HTMLElementTagNameMap[FreshType]> = new FHTML(elem);
-        output.attr("id", id);
-        this.element.appendChild(elem);
         return output;
     }
     static async loadImage(url: string): Promise<HTMLImageElement> {
-        return new Promise((acc, rej)=>{
+        return new Promise((acc, rej) => {
             let img = new Image();
 
             img.onload = function () {
                 acc(img);
             }
-            img.onerror = function (err){
+            img.onerror = function (err) {
                 rej(err);
             }
             img.src = url;
         })
-       
-        
+
+
     }
 }

@@ -1,0 +1,31 @@
+{
+  "name": "bristolboard",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AlanSorrill/BristolBoard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/AlanSorrill/BristolBoard/issues"
+  },
+  "homepage": "https://github.com/AlanSorrill/BristolBoard#readme",
+  "devDependencies": {
+    "@types/hammerjs": "^2.0.40",
+    "typescript": "^4.4.2"
+  },
+  "files": [
+    "lib/**/*"
+  ],
+  "dependencies": {
+    "hammerjs": "^2.0.8"
+  }
+}

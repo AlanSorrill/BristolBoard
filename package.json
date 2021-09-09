@@ -1,5 +1,5 @@
 {
-  "name": "bristolboard0",
+  "name": "bristolboard",
   "version": "1.0.0",
   "description": "Alan's Canvas wrapper library and other helpful bits",
   "main": "lib/index.js",

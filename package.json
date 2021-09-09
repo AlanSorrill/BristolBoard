@@ -1,7 +1,7 @@
 {
   "name": "bristolboard",
   "version": "1.0.0",
-  "description": "",
+  "description": "Alan's Canvas wrapper library and other helpful bits",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
@@ -12,8 +12,8 @@
     "type": "git",
     "url": "git+https://github.com/AlanSorrill/BristolBoard.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["Canvas", "Wrapper"],
+  "author": "Alan",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/AlanSorrill/BristolBoard/issues"

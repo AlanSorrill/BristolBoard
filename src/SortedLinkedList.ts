@@ -1,4 +1,4 @@
-import { isNumber } from './BristolImports';
+import { isNumber } from './CommonImports';
 
 export class SortedLinkedList<T> {
     get length(): number {

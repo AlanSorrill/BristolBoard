@@ -1,6 +1,6 @@
 {
   "name": "bristolboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Alan's Canvas wrapper library and other helpful bits",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

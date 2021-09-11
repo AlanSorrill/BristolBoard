@@ -20,6 +20,7 @@ export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTr
 
 Array.prototype.removeInPlace = function <T>(shouldKeep: (value: T, index: number) => boolean) {
     let count = 0;
+    
     for (let i = 0; i < this.length; i++) {
         if (!shouldKeep(this[i], i)) {
             this.splice(i, 1);
@@ -37,7 +38,7 @@ Array.prototype.pushAll = function <T>(arr: T[]) {
     }
 }
 Object.defineProperty(Array.prototype, "first", {
-    get: function last() {
+    get: function first() {
         return this.length == 0 ? null : this[0]
     }
 })

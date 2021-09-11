@@ -12,7 +12,10 @@
     "type": "git",
     "url": "git+https://github.com/AlanSorrill/BristolBoard.git"
   },
-  "keywords": ["Canvas", "Wrapper"],
+  "keywords": [
+    "Canvas",
+    "Wrapper"
+  ],
   "author": "Alan",
   "license": "ISC",
   "bugs": {
@@ -27,6 +30,7 @@
     "lib/**/*"
   ],
   "dependencies": {
+    "firebase-tools": "^9.18.0",
     "hammerjs": "^2.0.8"
   }
 }

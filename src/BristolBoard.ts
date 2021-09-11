@@ -1,6 +1,6 @@
 
 import { LogLevel, UIFrame, UIFrameResult, logger,  fColor, FColor, FHTML, UIElement } from "./BristolImports";
-import * as Hammer from 'hammerjs'
+
 let log = logger.local('BristolBoard');
 log.allowBelowLvl(LogLevel.naughty);
 export enum BristolHAlign {
@@ -182,38 +182,38 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.canvas.element.addEventListener('wheel', (evt: WheelEvent) => {
             ths.mouseScrolled(new MouseScrolledInputEvent(ths.iMouseX, ths.iMouseY, evt.deltaY));
         })
-        this.hammerManager = new Hammer.Manager(this.canvas.element);
-        this.rotateRecognizer = new Hammer.Rotate();
-        this.panRecognizer = new Hammer.Pan();
-        this.hammerManager.add(this.rotateRecognizer);
-        this.hammerManager.add(this.panRecognizer);
+        // this.hammerManager = new Hammer.Manager(this.canvas.element);
+        // this.rotateRecognizer = new Hammer.Rotate();
+        // this.panRecognizer = new Hammer.Pan();
+        // this.hammerManager.add(this.rotateRecognizer);
+        // this.hammerManager.add(this.panRecognizer);
 
-        this.hammerManager.on('panstart', (evt: HammerInput) => {
-            this.lastScrollOffset = [0, 0];
-            if (this.mousePressed(new MouseBtnInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, InputEventAction.Down))) {
-                evt.preventDefault();
-            }
-        })
-        this.hammerManager.on('panend', (evt: HammerInput) => {
-            this.lastScrollOffset = [0, 0];
+        // this.hammerManager.on('panstart', (evt: HammerInput) => {
+        //     this.lastScrollOffset = [0, 0];
+        //     if (this.mousePressed(new MouseBtnInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, InputEventAction.Down))) {
+        //         evt.preventDefault();
+        //     }
+        // })
+        // this.hammerManager.on('panend', (evt: HammerInput) => {
+        //     this.lastScrollOffset = [0, 0];
 
-            if (this.mouseReleased(new MouseBtnInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, InputEventAction.Up))) {
-                evt.preventDefault();
-            }
-        })
-        this.hammerManager.on('pan', (evt: HammerInput) => {
-            ths.scrollDeltaX += evt.deltaX * this.resolutionScale - ths.lastScrollOffset[0];
-            ths.scrollDeltaY += evt.deltaY * this.resolutionScale - ths.lastScrollOffset[1];
-            ths.lastScrollOffset[0] = evt.deltaX * this.resolutionScale;
-            ths.lastScrollOffset[1] = evt.deltaY * this.resolutionScale;
-            if (Math.max(Math.abs(this.scrollDeltaX), Math.abs(this.scrollDeltaY)) > 1) {
-                //  console.log(`${this.scrollDeltaX}, ${this.scrollDeltaY}`);
-                ths.mouseDragged(new MouseDraggedInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, ths.scrollDeltaX, ths.scrollDeltaY))
-                // ths.mouseDragged(evt, this.scrollDeltaX, this.scrollDeltaY);
-                this.scrollDeltaX = 0;
-                this.scrollDeltaY = 0;
-            }
-        })
+        //     if (this.mouseReleased(new MouseBtnInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, InputEventAction.Up))) {
+        //         evt.preventDefault();
+        //     }
+        // })
+        // this.hammerManager.on('pan', (evt: HammerInput) => {
+        //     ths.scrollDeltaX += evt.deltaX * this.resolutionScale - ths.lastScrollOffset[0];
+        //     ths.scrollDeltaY += evt.deltaY * this.resolutionScale - ths.lastScrollOffset[1];
+        //     ths.lastScrollOffset[0] = evt.deltaX * this.resolutionScale;
+        //     ths.lastScrollOffset[1] = evt.deltaY * this.resolutionScale;
+        //     if (Math.max(Math.abs(this.scrollDeltaX), Math.abs(this.scrollDeltaY)) > 1) {
+        //         //  console.log(`${this.scrollDeltaX}, ${this.scrollDeltaY}`);
+        //         ths.mouseDragged(new MouseDraggedInputEvent(evt.center.x * this.resolutionScale, evt.center.y * this.resolutionScale, 1, ths.scrollDeltaX, ths.scrollDeltaY))
+        //         // ths.mouseDragged(evt, this.scrollDeltaX, this.scrollDeltaY);
+        //         this.scrollDeltaX = 0;
+        //         this.scrollDeltaY = 0;
+        //     }
+        // })
 
         document.addEventListener('keydown', (evt: KeyboardEvent) => {
             // var inputKey: KeyboardInputKey
@@ -363,9 +363,9 @@ export class BristolBoard<RootElementType extends UIElement> {
     private lastScrollOffset: [number, number] = [0, 0];
     private scrollDeltaY: number = 0;
     private scrollDeltaX: number = 0;
-    private hammerManager: HammerManager
-    private rotateRecognizer: RotateRecognizer;
-    private panRecognizer: PanRecognizer;
+    // private hammerManager: HammerManager
+    // private rotateRecognizer: RotateRecognizer;
+    // private panRecognizer: PanRecognizer;
     private lastDrawTime: number;
     private currentDrawTime: number;
     private deltaDrawTime: number;

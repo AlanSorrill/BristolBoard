@@ -1,8 +1,8 @@
 
-import { LogLevel, UIFrame, UIFrameResult, logger,  fColor, FColor, FHTML, UIElement } from "./BristolImports";
+import { LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML, UIElement, FGesture, Coordinate } from "./BristolImports";
 
 let log = logger.local('BristolBoard');
-log.allowBelowLvl(LogLevel.naughty);
+log.allowBelowLvl(LogLevel.debug);
 export enum BristolHAlign {
     Left = 'left', Center = 'center', Right = 'right'
 }
@@ -138,6 +138,9 @@ export interface CornerRadius {
 export enum DeviceType {
     Phone, Tablet, Desktop
 }
+export enum DeviceOrientation {
+    portrait = 'portrait', landscape = 'landscape'
+}
 export class BristolBoard<RootElementType extends UIElement> {
 
     containerDiv: FHTML<HTMLDivElement>;
@@ -149,6 +152,8 @@ export class BristolBoard<RootElementType extends UIElement> {
     // jobExecutor: JobExecutor = null;
     keyboardState: Map<string, boolean> = new Map()
     deviceType: DeviceType;
+    orientation: DeviceOrientation
+    gesture: FGesture;
     isKeyPressed(key: KeyboardInputKey): boolean {
         return this.keyboardState.get(key) || false;
     }
@@ -158,6 +163,8 @@ export class BristolBoard<RootElementType extends UIElement> {
     } = {
             uiFrameOutlines: false
         }
+
+
     constructor(containerDivElem: HTMLDivElement, buildRootElement: (brist: BristolBoard<RootElementType>) => Promise<RootElementType>) {
         this.deviceType = BristolBoard.getDeviceType();
         let ths = this;
@@ -182,6 +189,22 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.canvas.element.addEventListener('wheel', (evt: WheelEvent) => {
             ths.mouseScrolled(new MouseScrolledInputEvent(ths.iMouseX, ths.iMouseY, evt.deltaY));
         })
+        setTimeout(() => ths.refreshOrientation(), 1);
+        window.addEventListener("orientationchange", function (event) {
+            console.log("The orientation of the screen is: ", screen.orientation);
+            ths.refreshOrientation();
+            let isGlitched = () => (ths.orientation == DeviceOrientation.landscape && ths.width < ths.height) || (ths.orientation == DeviceOrientation.portrait && ths.width > ths.height)
+            let fixGlitches = () => {
+                if (isGlitched()) {
+                    console.log("GLITCHED!!!")
+                    ths.onResize()
+                    this.setTimeout(() => fixGlitches(), 1);
+                }
+            }
+            fixGlitches();
+
+            this.setTimeout(() => { }, 1)
+        });
         // this.hammerManager = new Hammer.Manager(this.canvas.element);
         // this.rotateRecognizer = new Hammer.Rotate();
         // this.panRecognizer = new Hammer.Pan();
@@ -216,6 +239,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         // })
 
         document.addEventListener('keydown', (evt: KeyboardEvent) => {
+
             // var inputKey: KeyboardInputKey
             // if(evt.shiftKey){
             //     inputKey = KeyboardInputKey.shift;
@@ -253,7 +277,7 @@ export class BristolBoard<RootElementType extends UIElement> {
 
 
 
-            let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+            let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
             let event = new MouseMovedInputEvent(relX, relY, deltaX, deltaY);
             if (this.mouseOverElement != null) {
                 if (!this.mouseOverElement.frame.isInside(relX, relY)) {
@@ -264,7 +288,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             }
             for (let i = 0; i < overElements.length; i++) {
                 if (ths.mouseBtnsPressed[0]) {
-                    if(this.mouseOverElement[i].mouseDragged(evt)){
+                    if (this.mouseOverElement[i].mouseDragged(evt)) {
                         evt.preventDefault();
                         return;
                     }
@@ -283,6 +307,9 @@ export class BristolBoard<RootElementType extends UIElement> {
 
         })
         document.addEventListener('mousedown', (evt: MouseEvent) => {
+            if (this.isFullscreen == false) {
+                this.fullscreen();
+            }
             var parentOffset = ths.canvas.offset();
 
             var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
@@ -294,12 +321,12 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
                 ths.mouseBtnsPressed[evt.which] = true;
                 for (let i = 0; i < overElements.length; i++) {
-                    log.info(`Checking mousePressed on ${overElements[i].id}`)
+                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
                     if (overElements[i].mousePressed(event)) {
-                        evt.preventDefault();
                         break;
                     }
                 }
+                evt.preventDefault();
 
             }
         })
@@ -316,16 +343,72 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Up);
                 ths.mouseBtnsPressed[evt.which] = false;
                 for (let i = 0; i < overElements.length; i++) {
-                    log.info(`Checking mouseReleased on ${overElements[i].id}`)
+                    log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
                     if (overElements[i].mouseReleased(event)) {
-                        evt.preventDefault();
+                        break;
+                    }
+                }
+                evt.preventDefault();
+
+
+            }
+        })
+        this.gesture = new FGesture(this.canvas, {
+            onTouchStart: (pos: Coordinate) => {
+                //                 if (this.isFullscreen == false) {
+                //                     this.fullscreen();
+                //                 }
+                pos.x = pos.x * ths.resolutionScale;
+                pos.y = pos.y * ths.resolutionScale;
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Down);
+                ths.mouseBtnsPressed[1] = true;
+                for (let i = 0; i < overElements.length; i++) {
+                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
+                    if (overElements[i].mousePressed(event)) {
                         break;
                     }
                 }
 
 
+
+            },
+            onTouchEnd: (pos: Coordinate) => {
+                if (this.isFullscreen == false) {
+                    this.fullscreen();
+                }
+                pos.x = pos.x * ths.resolutionScale;
+                pos.y = pos.y * ths.resolutionScale;
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Up);
+                ths.mouseBtnsPressed[1] = true;
+                for (let i = 0; i < overElements.length; i++) {
+                    log.debug(`Checking mouseReleased on ${overElements[i].id}`)
+                    if (overElements[i].mouseReleased(event)) {
+                        break;
+                    }
+                }
+            },
+            onDrag: (pos: Coordinate, delta: Coordinate) => {
+                // console.log('drag', { pos, delta })
+                pos.x = pos.x * ths.resolutionScale;
+                pos.y = pos.y * ths.resolutionScale;
+                delta.x = delta.x * ths.resolutionScale;
+                delta.y = delta.y * ths.resolutionScale;
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let event = new MouseDraggedInputEvent(pos.x, pos.y, 1, delta.x, delta.y);
+                ths.mouseBtnsPressed[1] = true;
+                for (let i = 0; i < overElements.length; i++) {
+                    log.naughty(`Checking mouseDragged on ${overElements[i].id}`)
+                    if (overElements[i].mouseDragged(event)) {
+                        break;
+                    }
+                }
+            },
+            onPinch: (pos: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => {
+                // console.log('pinch', { pos, dragDelta, pinchDelta })
             }
-        })
+        });
         // this.canvas.on('keydown', (event: JQuery.KeyDownEvent<HTMLCanvasElement, null, HTMLCanvasElement, HTMLCanvasElement>)=>{
         //     return ths.keyDown(event);
         // })
@@ -341,12 +424,13 @@ export class BristolBoard<RootElementType extends UIElement> {
         })
 
     }
+
     rootElement: RootElementType = null;
     mousePressed(evt: MouseBtnInputEvent) {
         return this.rootElement.mousePressed(evt);
     }
     mouseReleased(evt: MouseBtnInputEvent) {
-        return false;
+        return this.rootElement.mouseReleased(evt);
     }
     mouseMoved(event: MouseMovedInputEvent) {
         return false;
@@ -359,6 +443,9 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
     pixelDensity(): number {
         return window.devicePixelRatio;
+    }
+    minTouchSize() {
+        return Math.min(this.width, this.height) / 6;
     }
     private lastScrollOffset: [number, number] = [0, 0];
     private scrollDeltaY: number = 0;
@@ -378,24 +465,24 @@ export class BristolBoard<RootElementType extends UIElement> {
     get performanceRatio() {
         return this.targetFps / this.deltaDrawTime
     }
-  
+
     targetFps: number = 20;
-    
+
     private async draw() {
-        
+
         this.currentDrawTime = Date.now();
         this.deltaDrawTime = (this.currentDrawTime - this.lastDrawTime);
-        
+
         this.onDraw(this.deltaDrawTime);
         this.lastDrawTime = this.currentDrawTime;
         let ths = this;
         // if (this.shouldExecJobs()) {
         //     await this.jobExecutor.execJobs();
         // }
-        
+
         if (this.autoFrames) {
             setTimeout(() => {
-                window.requestAnimationFrame(()=>{
+                window.requestAnimationFrame(() => {
                     ths.draw();
                 });
             }, Math.max(this.targetFrameTime - this.deltaDrawTime, 0))
@@ -435,6 +522,11 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.canvas.setCss('width', `${this.iWidth}px`);
         this.canvas.setCss('height', `${this.iHeight}px`);
     }
+    refreshOrientation() {
+        let type: DeviceOrientation = screen.orientation.type.split('-')[0] as DeviceOrientation;
+        console.log(type);
+        this.orientation = type;
+    }
     displayDensity() {
         return 1;
     }
@@ -467,6 +559,14 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.ctx.lineTo(upperLeft[0], upperLeft[1] + rad.upperLeft);
         this.ctx.arcTo(upperLeft[0], upperLeft[1], upperLeft[0] + rad.upperLeft, upperLeft[1], rad.upperLeft);
         this.ctx.closePath();
+    }
+    isFullscreen: boolean = false;
+    fullscreen() {
+        let ths = this;
+        document.documentElement.requestFullscreen({ navigationUI: "hide" }).then(() => {
+            console.log('gotFullscreen')
+            ths.isFullscreen = true;
+        })
     }
     roundedRectFrame(frame: UIFrame, rad: number | CornerRadius, fill: boolean = false, stroke: boolean = false) {
         if (typeof rad == 'number') {
@@ -564,6 +664,10 @@ export class BristolBoard<RootElementType extends UIElement> {
         }
     }
     fillColor(style: FColor) {
+        if (style == null) {
+            this.ctx.fillStyle = BristolBoard.noStyle;
+            return;
+        }
         this.ctx.fillStyle = style.toHexString();
     }
     noStroke() {
@@ -665,10 +769,10 @@ export class BristolBoard<RootElementType extends UIElement> {
             return this.rectFrame(frame.lastResult, stroke, fill);
         }
         this.ctx.rect(frame.left, frame.top, frame.width, frame.height);
-        if (stroke) {
+        if (stroke && this.ctx.strokeStyle != null) {
             this.ctx.stroke();
         }
-        if (fill) {
+        if (fill && this.ctx.fillStyle != null) {
             this.ctx.fill();
         }
     }
@@ -709,7 +813,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     //     //     ~removeIndex && this.uiElements.splice(removeIndex, 1);
     //     // }
     // }
-     onDraw(deltaMs: number): void {
+    onDraw(deltaMs: number): void {
         let ths = this;
         this.noStroke();
         this.fillColor(fColor.grey.darken3);
@@ -730,6 +834,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         // })
         if (this.debuggerFlags.uiFrameOutlines && this.rootElement != null) {
             this.rootElement.drawUIFrame(true, 1);
+            
             this.fillColor(this.rootElement.debugFrameColor);
             this.textAlign(BristolHAlign.Left, BristolVAlign.Bottom)
             this.textSize(8);
@@ -742,23 +847,23 @@ export class BristolBoard<RootElementType extends UIElement> {
 
 
     }
-static getDeviceType(): DeviceType{
-    if(this.isPhone()){
-        return DeviceType.Phone;
-    } else if(this.isPhoneOrTablet()){
-        return DeviceType.Tablet;
-    } else {
-        return DeviceType.Desktop;
+    static getDeviceType(): DeviceType {
+        if (this.isPhone()) {
+            return DeviceType.Phone;
+        } else if (this.isPhoneOrTablet()) {
+            return DeviceType.Tablet;
+        } else {
+            return DeviceType.Desktop;
+        }
     }
-}
     static isPhone(): boolean {
         let check = false;
-        (function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4))) check = true;})(navigator.userAgent||navigator.vendor||window['opera']);
+        (function (a) { if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) check = true; })(navigator.userAgent || navigator.vendor || window['opera']);
         return check;
-      };
-      static isPhoneOrTablet(): boolean {
+    };
+    static isPhoneOrTablet(): boolean {
         let check = false;
-        (function(a){if(/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4))) check = true;})(navigator.userAgent||navigator.vendor||window['opera']);
+        (function (a) { if (/(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(a) || /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0, 4))) check = true; })(navigator.userAgent || navigator.vendor || window['opera']);
         return check;
-      };
+    };
 }

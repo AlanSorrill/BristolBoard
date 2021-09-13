@@ -405,7 +405,8 @@ export class FColorDirectory {
             "900": "#263238"
         },
         "black": "#000000",
-        "white": "#ffffff"
+        "white": "#ffffff",
+        "iowaGold": "#FFCD00"
 
     }
     red: FColorSwath;
@@ -429,8 +430,10 @@ export class FColorDirectory {
     blueGrey: FColorSwath;
     black: FColor;
     white: FColor;
+    iowaGold: FColor;
     darkMode: [FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor] = [null, null, null, null, null, null, null, null, null, null, null, null]
     lightText: [FColor, FColor] = [FColor.fromHex('#9E9E9E'), FColor.fromHex('#E0E0E0')]
+    darkText: [FColor, FColor] = [FColor.fromHex('#373737'), FColor.fromHex('#898989')]
     public static fColor: FColorDirectory = null;//singlton instance
 
     constructor() {

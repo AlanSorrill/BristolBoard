@@ -5,6 +5,8 @@ export interface TouchPoint extends Touch {
 }
 export type Coordinate = { x: number, y: number }
 export interface FGesture_Listeners {
+    onTouchStart: (pos: Coordinate) => void
+    onTouchEnd: (pos: Coordinate) => void
     onDrag: (position: Coordinate, delta: Coordinate) => void
     onPinch: (position: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => void
 }
@@ -25,10 +27,14 @@ export class FGesture {
                         x: 0,
                         y: 0
                     }
+                   // console.log(`Starting touch point ${ev.changedTouches[i].identifier}`, ths.touchPoints[ev.changedTouches[i].identifier])
+                    ths.listeners.onTouchStart({x: ths.touchPoints[ev.changedTouches[i].identifier].clientX, y: ths.touchPoints[ev.changedTouches[i].identifier].clientY})
                 }
             }
+            ev.preventDefault();
         })
         document.addEventListener('touchmove', (ev: TouchEvent) => {
+            ev.preventDefault();
            // console.log(ev);
             let lastX: number;
             let lastY: number;
@@ -52,14 +58,20 @@ export class FGesture {
             } else if (ev.targetTouches.length == 2) {
 
             }
+//             console.log(ev);
         })
         document.addEventListener('touchend', (ev: TouchEvent) => {
          //   console.log(ev);
+         let DEBUGG = {ev, ths};
             for (let i = 0; i < Math.min(ths.touchPoints.length, ev.changedTouches.length); i++) {
+                ths.listeners.onTouchEnd({x: ths.touchPoints[ev.changedTouches[i].identifier]?.clientX, y: ths.touchPoints[ev.changedTouches[i].identifier]?.clientY})
                 if (ev.changedTouches[i].identifier < ths.touchPoints.length) {
+                    //console.log(`Removing touch point ${ev.changedTouches[i].identifier}`)
                     ths.touchPoints[ev.changedTouches[i].identifier] = null;
                 }
+                
             }
+            ev.preventDefault();
         })
     }
 }

@@ -102,8 +102,12 @@ export class SortedLinkedList<T> {
     remove(condition: ((v: T) => boolean)) {
         if (condition(this.head.value)) {
             this.head = this.head.next;
+            if(this.head != null){
             this.head.last = null;
             this.count--;
+            } else {
+                this.count = 0;
+            }
             return;
         }
         let n = this.head.next;

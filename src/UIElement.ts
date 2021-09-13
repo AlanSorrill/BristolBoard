@@ -1,5 +1,5 @@
 import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard } from './BristolImports'
-import {  } from "./UIFrame";
+import { } from "./UIFrame";
 
 export class UIElement {
     id: string;
@@ -140,7 +140,7 @@ export class UIElement {
         })
     }
     findElementsUnderCursor(x: number, y: number, found: UIElement[] = []) {
-        if (this.frame.isInside(x, y)) {
+        if (this.frame.isInside(x, y) && this.frame.isVisible()) {
             found.push(this);
             this.cElements.forEach((elem: UIElement) => {
                 elem.findElementsUnderCursor(x, y, found);
@@ -172,24 +172,26 @@ export class UIElement {
         return this.dfc;
     }
     drawUIFrame(drawChildFrames: boolean = true, weight: number = 1) {
-        this.brist.strokeColor(this.debugFrameColor);
-        this.brist.strokeWeight(weight);
-        this.brist.ellipse(this.frame.leftX(), this.frame.topY(), weight * 2, weight * 2);
-        this.brist.line(this.frame.leftX(), this.frame.topY(), this.frame.rightX(), this.frame.topY());
-        this.brist.ellipse(this.frame.rightX(), this.frame.topY(), weight * 2, weight * 2);
-        this.brist.line(this.frame.rightX(), this.frame.topY(), this.frame.rightX(), this.frame.bottomY());
-        this.brist.ellipse(this.frame.rightX(), this.frame.bottomY(), weight * 2, weight * 2);
-        this.brist.line(this.frame.rightX(), this.frame.bottomY(), this.frame.leftX(), this.frame.bottomY());
-        this.brist.ellipse(this.frame.leftX(), this.frame.bottomY(), weight * 2, weight * 2);
-        this.brist.line(this.frame.leftX(), this.frame.bottomY(), this.frame.leftX(), this.frame.topY());
-        this.brist.ellipse(this.frame.centerX(), this.frame.centerY(), weight * 2, weight * 2);
-        // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
+        if (this.frame.isVisible()) {
+            this.brist.strokeColor(this.debugFrameColor);
+            this.brist.strokeWeight(weight);
+            this.brist.ellipse(this.frame.leftX(), this.frame.topY(), weight * 2, weight * 2);
+            this.brist.line(this.frame.leftX(), this.frame.topY(), this.frame.rightX(), this.frame.topY());
+            this.brist.ellipse(this.frame.rightX(), this.frame.topY(), weight * 2, weight * 2);
+            this.brist.line(this.frame.rightX(), this.frame.topY(), this.frame.rightX(), this.frame.bottomY());
+            this.brist.ellipse(this.frame.rightX(), this.frame.bottomY(), weight * 2, weight * 2);
+            this.brist.line(this.frame.rightX(), this.frame.bottomY(), this.frame.leftX(), this.frame.bottomY());
+            this.brist.ellipse(this.frame.leftX(), this.frame.bottomY(), weight * 2, weight * 2);
+            this.brist.line(this.frame.leftX(), this.frame.bottomY(), this.frame.leftX(), this.frame.topY());
+            this.brist.ellipse(this.frame.centerX(), this.frame.centerY(), weight * 2, weight * 2);
+            // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
 
-        if (drawChildFrames) {
-            this.cElements.forEach((elem: UIElement) => {
-                elem.drawUIFrame(true, weight);
-            })
+            if (drawChildFrames) {
+                this.cElements.forEach((elem: UIElement) => {
+                    elem.drawUIFrame(true, weight);
+                })
 
+            }
         }
     }
 }

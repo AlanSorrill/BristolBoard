@@ -3,8 +3,9 @@
         "target": "es5",
         "module": "commonjs",
         "declaration": true,
-        "outDir": "./lib"
-        
+        "sourceMap": true,
+        "outDir": "./lib",
+        "watch": true
     },
     "include": [
         "src"

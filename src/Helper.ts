@@ -5,11 +5,15 @@ declare global {
     interface String {
         replaceAll(a: string, b: string): string;
     }
+    interface Map<K, V> {
+        toArray(): V[]
+    }
     interface Array<T> {
         pushAll(arr: T[]): void;
         get first(): T
         get last(): T
         removeInPlace(shouldKeep: (value: T, index: number) => boolean): number
+        toMap(indexKey: keyof T): Map<string, T>
     }
 
 
@@ -18,9 +22,25 @@ declare global {
 export type optFunc<T> = (T | (() => T)) | { t: string, v: optFunc<T> };
 export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTransform<I, O> };
 
+Map.prototype.toArray = function <K, V>() {
+    let out: V[] = [];
+    (this as Map<K, V>).forEach((val: V, key: K) => {
+        out.push(val);
+    })
+    return out;
+}
+Array.prototype.toMap = function <T>(indexKey: keyof T) {
+    let out = new Map<string, T>();
+    let current;
+    for (let i = 0; i < this.length; i++) {
+        current = this[i];
+        out.set(current[indexKey], current)//; = current;
+    }
+    return out;
+}
 Array.prototype.removeInPlace = function <T>(shouldKeep: (value: T, index: number) => boolean) {
     let count = 0;
-    
+
     for (let i = 0; i < this.length; i++) {
         if (!shouldKeep(this[i], i)) {
             this.splice(i, 1);
@@ -37,16 +57,22 @@ Array.prototype.pushAll = function <T>(arr: T[]) {
         this.push(arr[i]);
     }
 }
-Object.defineProperty(Array.prototype, "first", {
-    get: function first() {
-        return this.length == 0 ? null : this[0]
-    }
-})
-Object.defineProperty(Array.prototype, "last", {
-    get: function last() {
-        return this.length == 0 ? null : this[this.length - 1]
-    }
-})
+if (typeof Array.prototype.first == 'undefined') {
+    console.log('Shimming array.first')
+    Object.defineProperty(Array.prototype, "first", {
+        get: function first() {
+            return this.length == 0 ? null : this[0]
+        }
+    })
+}
+if (typeof Array.prototype.last == 'undefined') {
+    console.log('Shimming array.last')
+    Object.defineProperty(Array.prototype, "last", {
+        get: function last() {
+            return this.length == 0 ? null : this[this.length - 1]
+        }
+    })
+}
 String.prototype.replaceAll = function (a: string, b: string) {
     return this.split(a).join(b);
 };
@@ -78,6 +104,9 @@ export function evalOptionalFunc<T>(input: optFunc<T>, def: T = null) {
     }
 
     return input;
+}
+export function clamp(value: number, min: number, max: number) {
+    return Math.min(max, Math.max(value, min));
 }
 export function evalOptionalTransfrom<I, O>(transform: optTransform<I, O>, input: I, def: O = null) {
     if (transform == null || transform == undefined) {

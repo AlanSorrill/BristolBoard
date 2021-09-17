@@ -1,4 +1,5 @@
 
+import { UIFrameDescription } from ".";
 import { LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML, UIElement, FGesture, Coordinate } from "./BristolImports";
 
 let log = logger.local('BristolBoard');
@@ -127,6 +128,18 @@ export class MouseDraggedInputEvent extends MouseMovedInputEvent {
     constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number) {
         super(x, y, deltaX, deltaY);
         this.btn = btn;
+    }
+}
+export class MousePinchedInputEvent extends MouseMovedInputEvent {
+    btn: number
+    pinchX: number;
+    pinchY: number;
+
+    constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number, pinchX: number, pinchY: number) {
+        super(x, y, deltaX, deltaY);
+        this.btn = btn;
+        this.pinchX = pinchX;
+        this.pinchY = pinchY;
     }
 }
 export interface CornerRadius {
@@ -308,7 +321,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         })
         document.addEventListener('mousedown', (evt: MouseEvent) => {
             if (this.isFullscreen == false) {
-                this.fullscreen();
+               // this.fullscreen();
             }
             var parentOffset = ths.canvas.offset();
 
@@ -317,7 +330,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
                 relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
 
-                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
                 ths.mouseBtnsPressed[evt.which] = true;
                 for (let i = 0; i < overElements.length; i++) {
@@ -360,7 +373,7 @@ export class BristolBoard<RootElementType extends UIElement> {
                 //                 }
                 pos.x = pos.x * ths.resolutionScale;
                 pos.y = pos.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Down);
                 ths.mouseBtnsPressed[1] = true;
                 for (let i = 0; i < overElements.length; i++) {
@@ -375,11 +388,11 @@ export class BristolBoard<RootElementType extends UIElement> {
             },
             onTouchEnd: (pos: Coordinate) => {
                 if (this.isFullscreen == false) {
-                    this.fullscreen();
+                   // this.fullscreen();
                 }
                 pos.x = pos.x * ths.resolutionScale;
                 pos.y = pos.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Up);
                 ths.mouseBtnsPressed[1] = true;
                 for (let i = 0; i < overElements.length; i++) {
@@ -395,7 +408,7 @@ export class BristolBoard<RootElementType extends UIElement> {
                 pos.y = pos.y * ths.resolutionScale;
                 delta.x = delta.x * ths.resolutionScale;
                 delta.y = delta.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y).sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseDraggedInputEvent(pos.x, pos.y, 1, delta.x, delta.y);
                 ths.mouseBtnsPressed[1] = true;
                 for (let i = 0; i < overElements.length; i++) {
@@ -407,6 +420,21 @@ export class BristolBoard<RootElementType extends UIElement> {
             },
             onPinch: (pos: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => {
                 // console.log('pinch', { pos, dragDelta, pinchDelta })
+                pos.x = pos.x * ths.resolutionScale;
+                pos.y = pos.y * ths.resolutionScale;
+                dragDelta.x = dragDelta.x * ths.resolutionScale;
+                dragDelta.y = dragDelta.y * ths.resolutionScale;
+                pinchDelta.x = pinchDelta.x * ths.resolutionScale;
+                pinchDelta.y = pinchDelta.y * ths.resolutionScale;
+                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let event = new MousePinchedInputEvent(pos.x, pos.y, 1, dragDelta.x, dragDelta.y, pinchDelta.x, pinchDelta.y);
+                ths.mouseBtnsPressed[1] = true;
+                for (let i = 0; i < overElements.length; i++) {
+                    log.naughty(`Checking mousePinched on ${overElements[i].id}`)
+                    if (overElements[i].mousePinched(event)) {
+                        break;
+                    }
+                }
             }
         });
         // this.canvas.on('keydown', (event: JQuery.KeyDownEvent<HTMLCanvasElement, null, HTMLCanvasElement, HTMLCanvasElement>)=>{
@@ -562,13 +590,14 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
     isFullscreen: boolean = false;
     fullscreen() {
-        let ths = this;
-        document.documentElement.requestFullscreen({ navigationUI: "hide" }).then(() => {
-            console.log('gotFullscreen')
-            ths.isFullscreen = true;
-        })
+        //TODO instantiate this method
+        // let ths = this;
+        // document.documentElement.requestFullscreen({ navigationUI: "hide" }).then(() => {
+        //     console.log('gotFullscreen')
+        //     ths.isFullscreen = true;
+        // })
     }
-    roundedRectFrame(frame: UIFrame, rad: number | CornerRadius, fill: boolean = false, stroke: boolean = false) {
+    roundedRectFrame(frame: UIFrame | UIFrameResult, rad: number | CornerRadius, fill: boolean = false, stroke: boolean = false) {
         if (typeof rad == 'number') {
             rad = {
                 lowerLeft: rad,
@@ -577,10 +606,23 @@ export class BristolBoard<RootElementType extends UIElement> {
                 upperRight: rad
             }
         }
-        let upperLeft: [number, number] = [frame.leftX(), frame.topY()];
-        let upperRight: [number, number] = [frame.rightX(), frame.topY()];
-        let lowerRight: [number, number] = [frame.rightX(), frame.bottomY()];
-        let lowerLeft: [number, number] = [frame.leftX(), frame.bottomY()];
+        let upperLeft: [number, number]; 
+        let upperRight: [number, number];
+        let lowerRight: [number, number];
+        let lowerLeft: [number, number] ;
+
+        if(frame instanceof UIFrame){
+            lowerLeft= [frame.leftX(), frame.bottomY()];
+            lowerRight = [frame.rightX(), frame.bottomY()];
+            upperRight = [frame.rightX(), frame.topY()];
+            upperLeft= [frame.leftX(), frame.topY()];
+        } else {
+            lowerLeft= [frame.left, frame.bottom];
+            lowerRight = [frame.right, frame.bottom];
+            upperRight = [frame.right, frame.top];
+            upperLeft= [frame.left, frame.top];
+        }
+        
 
         this.ctx.beginPath();
         this.ctx.moveTo(upperLeft[0] + rad.upperLeft, upperLeft[1]);
@@ -834,7 +876,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         // })
         if (this.debuggerFlags.uiFrameOutlines && this.rootElement != null) {
             this.rootElement.drawUIFrame(true, 1);
-            
+
             this.fillColor(this.rootElement.debugFrameColor);
             this.textAlign(BristolHAlign.Left, BristolVAlign.Bottom)
             this.textSize(8);

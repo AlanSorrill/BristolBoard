@@ -1,5 +1,5 @@
-import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard } from './BristolImports'
-import { } from "./UIFrame";
+import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent } from './BristolImports'
+
 
 export class UIElement {
     id: string;
@@ -14,7 +14,10 @@ export class UIElement {
     // panel: UIContentPanel;
 
 
-
+private static idCounter = 0;
+public static createUID(name: string){
+    return `${name}${this.idCounter++}`
+}
 
 
     get depth() {
@@ -155,6 +158,7 @@ export class UIElement {
     mouseExit(evt: MouseInputEvent) { return false; }
     mouseMoved(evt: MouseMovedInputEvent) { return false; }
     mouseDragged(evt: MouseDraggedInputEvent) { return false; }
+    mousePinched(evt: MousePinchedInputEvent) {return false;}
     mouseWheel(delta: MouseScrolledInputEvent) { return false; }
     keyPressed(evt: KeyboardInputEvent) { return false; }
     keyReleased(evt: KeyboardInputEvent) { return false; }

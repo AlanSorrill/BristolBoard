@@ -198,6 +198,54 @@ public static createUID(name: string){
             }
         }
     }
+    get left(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.left;
+        }
+        return this.frame.leftX();
+    }
+    get right(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.right;
+        }
+        return this.frame.rightX();
+    }
+    get top(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.top;
+        } 
+        return this.frame.topY();
+    }
+    get bottom(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.bottom;
+        }
+        return this.frame.bottomY();
+    }
+    get centerX(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.centerX;
+        }
+        return this.frame.centerX();
+    }
+    get centerY(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.centerY;
+        }
+        return this.frame.centerY();
+    }
+    get width(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.width;
+        }
+        return this.frame.measureWidth();
+    }
+    get height(){
+        if(this.frame.lastResult != null){
+            return this.frame.lastResult.height;
+        }
+        return this.frame.measureHeight();
+    }
 }
 export enum MouseState {
     Gone,

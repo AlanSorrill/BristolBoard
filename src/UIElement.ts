@@ -1,7 +1,9 @@
 import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent } from './BristolImports'
 
 
-export class UIElement {
+export abstract class UIElement {
+    
+   
     id: string;
     parent: UIElement | BristolBoard<any> = null;
     cElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
@@ -14,10 +16,10 @@ export class UIElement {
     // panel: UIContentPanel;
 
 
-private static idCounter = 0;
-public static createUID(name: string){
-    return `${name}${this.idCounter++}`
-}
+    private static idCounter = 0;
+    public static createUID(name: string) {
+        return `${name}${this.idCounter++}`
+    }
 
 
     get depth() {
@@ -118,12 +120,9 @@ public static createUID(name: string){
 
         this.onDrawForeground(frame, deltaTime);
     }
-    onDrawBackground(frame: UIFrameResult, deltaTime: number) {
-
-    }
-    onDrawForeground(frame: UIFrameResult, deltaTime: number) {
-
-    }
+    abstract onDrawBackground(frame: UIFrameResult, deltaTime: number): void 
+    abstract onDrawForeground(frame: UIFrameResult, deltaTime: number): void 
+    abstract shouldDragLock(event: MouseBtnInputEvent): boolean
     isInside(x: number, y: number) {
         return this.frame.isInside(x, y);
     }
@@ -147,22 +146,27 @@ public static createUID(name: string){
             found.push(this);
             this.cElements.forEach((elem: UIElement) => {
                 elem.findElementsUnderCursor(x, y, found);
-            })
+            }) 
             return found;
         }
 
     }
-    mousePressed(evt: MouseBtnInputEvent) { return false; }
-    mouseReleased(evt: MouseBtnInputEvent) { return false; }
-    mouseEnter(evt: MouseInputEvent) { return true; }
-    mouseExit(evt: MouseInputEvent) { return false; }
-    mouseMoved(evt: MouseMovedInputEvent) { return false; }
-    mouseDragged(evt: MouseDraggedInputEvent) { return false; }
-    mousePinched(evt: MousePinchedInputEvent) {return false;}
-    mouseWheel(delta: MouseScrolledInputEvent) { return false; }
-    keyPressed(evt: KeyboardInputEvent) { return false; }
-    keyReleased(evt: KeyboardInputEvent) { return false; }
-
+    get isDragLocked(){
+        return this.brist.dragLockElement?.id == this.id;
+    }
+    abstract mousePressed(evt: MouseBtnInputEvent) : boolean
+    abstract mouseReleased(evt: MouseBtnInputEvent): boolean
+    abstract mouseEnter(evt: MouseInputEvent) : boolean
+    abstract mouseExit(evt: MouseInputEvent) : boolean
+    abstract mouseMoved(evt: MouseMovedInputEvent): boolean
+    abstract mouseDragged(evt: MouseDraggedInputEvent) : boolean
+    abstract mousePinched(evt: MousePinchedInputEvent): boolean
+    abstract mouseWheel(delta: MouseScrolledInputEvent): boolean
+    abstract keyPressed(evt: KeyboardInputEvent): boolean
+    abstract keyReleased(evt: KeyboardInputEvent): boolean
+    onDragEnd(event: MouseBtnInputEvent) {
+        
+    }
 
     private dfc = null;
     get debugFrameColor() {
@@ -198,50 +202,50 @@ public static createUID(name: string){
             }
         }
     }
-    get left(){
-        if(this.frame.lastResult != null){
+    get left() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.left;
         }
         return this.frame.leftX();
     }
-    get right(){
-        if(this.frame.lastResult != null){
+    get right() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.right;
         }
         return this.frame.rightX();
     }
-    get top(){
-        if(this.frame.lastResult != null){
+    get top() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.top;
-        } 
+        }
         return this.frame.topY();
     }
-    get bottom(){
-        if(this.frame.lastResult != null){
+    get bottom() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.bottom;
         }
         return this.frame.bottomY();
     }
-    get centerX(){
-        if(this.frame.lastResult != null){
+    get centerX() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.centerX;
         }
         return this.frame.centerX();
     }
-    get centerY(){
-        if(this.frame.lastResult != null){
+    get centerY() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.centerY;
         }
         return this.frame.centerY();
     }
-    get width(){
-        if(this.frame.lastResult != null){
+    get width() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.width;
         }
         return this.frame.measureWidth();
     }
-    get height(){
-        if(this.frame.lastResult != null){
+    get height() {
+        if (this.frame.lastResult != null) {
             return this.frame.lastResult.height;
         }
         return this.frame.measureHeight();

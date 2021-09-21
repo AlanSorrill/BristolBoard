@@ -1,4 +1,5 @@
 
+import { MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent } from "../BristolBoard";
 import {
     evalOptionalFunc, optFunc, UIFrameDescription_CornerWidthHeight,
     BristolFontFamily, BristolHAlign, BristolVAlign, UIElement, UIFrameResult,
@@ -83,6 +84,24 @@ export class UIButton extends UIElement {
     mouseExit(evt: MouseInputEvent) {
         this.mouseState = MouseState.Gone;
         return true;
+    }
+    shouldDragLock(event: MouseBtnInputEvent): boolean {
+        return false;
+    }
+    mouseDragged(evt: MouseDraggedInputEvent): boolean {
+        return false;
+    }
+    mousePinched(evt: MousePinchedInputEvent): boolean {
+        return false;
+    }
+    mouseWheel(delta: MouseScrolledInputEvent): boolean {
+        return false;
+    }
+    keyPressed(evt: KeyboardInputEvent): boolean {
+        return false;
+    }
+    keyReleased(evt: KeyboardInputEvent): boolean {
+        return false;
     }
 
 }

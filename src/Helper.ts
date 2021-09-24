@@ -73,6 +73,17 @@ if (typeof Array.prototype.last == 'undefined') {
         }
     })
 }
+export function removeCammelCase(input: string): string {
+    let out: string[] = [];
+    out.push(input[0].toUpperCase());
+    for (let i = 1; i < input.length; i++) {
+        if (input[i] == input[i].toUpperCase()) {
+            out.push(' ');
+        }
+        out.push(input[i]);
+    }
+    return out.join('');
+}
 String.prototype.replaceAll = function (a: string, b: string) {
     return this.split(a).join(b);
 };

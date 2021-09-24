@@ -288,7 +288,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             let deltaY = relY - ths.iMouseY;
             ths.iMouseX = relX;
             ths.iMouseY = relY;
-            
+
             for (let btnNumber = 0; btnNumber < ths.mouseBtnsPressed.length; btnNumber++) {
                 if (ths.mouseBtnsPressed[btnNumber]) {
                     let dragEvent = new MouseDraggedInputEvent(relX, relY, btnNumber, deltaX, deltaY);
@@ -300,7 +300,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             }
             let event = new MouseMovedInputEvent(relX, relY, deltaX, deltaY);
 
-           
+
 
             let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
@@ -312,7 +312,7 @@ export class BristolBoard<RootElementType extends UIElement> {
                 }
             }
             for (let i = 0; i < overElements.length; i++) {
-               
+
                 if (overElements[i].mouseMoved(event)) {
                     if (this.mouseOverElement != null) {
                         this.mouseOverElement.mouseExit(event);
@@ -568,7 +568,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     get mouseY(): number {
         return this.iMouseY;
     }
-    protected resolutionScale: number = 2;
+    public resolutionScale: number = 2;
     private onResize() {
         this.iWidth = this.containerDiv.width;
         this.iHeight = this.containerDiv.height;
@@ -802,6 +802,24 @@ export class BristolBoard<RootElementType extends UIElement> {
     textWeight(weight: BristolFontWeight) {
         this.font.weight = weight;
         this.ctx.font = this.font.toString();
+    }
+    textSizeMaxWidth(perferredSize: number, textToMeasure: string, maxWidth: number, stepSize: number = 2) {
+        this.textSize(perferredSize);
+        let textMetrics = this.ctx.measureText(textToMeasure);
+        let textWidth = Math.abs(textMetrics.actualBoundingBoxLeft) +
+            Math.abs(textMetrics.actualBoundingBoxRight);
+        while (textWidth > maxWidth) {
+            if(perferredSize <= 0){
+                perferredSize = 1;
+            this.textSize(perferredSize);
+                break;
+            }
+            perferredSize -= stepSize;
+            this.textSize(perferredSize);
+            textMetrics = this.ctx.measureText(textToMeasure);
+            textWidth = Math.abs(textMetrics.actualBoundingBoxLeft) +
+                Math.abs(textMetrics.actualBoundingBoxRight);
+        }
     }
     textSize(size: number) {
         this.font.size = size;

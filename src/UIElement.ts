@@ -2,8 +2,8 @@ import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent
 
 
 export abstract class UIElement {
-    
-   
+
+
     id: string;
     parent: UIElement | BristolBoard<any> = null;
     cElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
@@ -120,9 +120,8 @@ export abstract class UIElement {
 
         this.onDrawForeground(frame, deltaTime);
     }
-    abstract onDrawBackground(frame: UIFrameResult, deltaTime: number): void 
-    abstract onDrawForeground(frame: UIFrameResult, deltaTime: number): void 
-    abstract shouldDragLock(event: MouseBtnInputEvent): boolean
+    abstract onDrawBackground(frame: UIFrameResult, deltaTime: number): void
+    abstract onDrawForeground(frame: UIFrameResult, deltaTime: number): void
     isInside(x: number, y: number) {
         return this.frame.isInside(x, y);
     }
@@ -146,27 +145,17 @@ export abstract class UIElement {
             found.push(this);
             this.cElements.forEach((elem: UIElement) => {
                 elem.findElementsUnderCursor(x, y, found);
-            }) 
+            })
             return found;
         }
 
     }
-    get isDragLocked(){
+    get isDragLocked() {
         return this.brist.dragLockElement?.id == this.id;
     }
-    abstract mousePressed(evt: MouseBtnInputEvent) : boolean
-    abstract mouseReleased(evt: MouseBtnInputEvent): boolean
-    abstract mouseEnter(evt: MouseInputEvent) : boolean
-    abstract mouseExit(evt: MouseInputEvent) : boolean
-    abstract mouseMoved(evt: MouseMovedInputEvent): boolean
-    abstract mouseDragged(evt: MouseDraggedInputEvent) : boolean
-    abstract mousePinched(evt: MousePinchedInputEvent): boolean
-    abstract mouseWheel(delta: MouseScrolledInputEvent): boolean
-    abstract keyPressed(evt: KeyboardInputEvent): boolean
-    abstract keyReleased(evt: KeyboardInputEvent): boolean
-    onDragEnd(event: MouseBtnInputEvent) {
-        
-    }
+
+
+
 
     private dfc = null;
     get debugFrameColor() {
@@ -250,9 +239,44 @@ export abstract class UIElement {
         }
         return this.frame.measureHeight();
     }
+    static hasListener<T>(target: any, functionName: string): target is T {
+        return (typeof target[functionName] == 'function')
+    }
+    static hasMouseMovementListener(target: UIElement): target is (UIElement & MouseMovementListener) {
+        return UIElement.hasListener<MouseMovementListener>(target, 'mouseEnter')
+    }
+    static hasMouseBtnListener(target: UIElement): target is (UIElement & MouseBtnListener) {
+        return UIElement.hasListener<MouseBtnListener>(target, 'mousePressed')
+    }
+    static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
+        return UIElement.hasListener<MouseDragListener>(this, 'mouseDragged')
+    }
+    static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {
+        return UIElement.hasListener<KeyListener>(this, 'keyReleased')
+    }
 }
 export enum MouseState {
     Gone,
     Over,
     Pressed
+}
+export interface MouseMovementListener {
+    mouseEnter(evt: MouseInputEvent): boolean
+    mouseExit(evt: MouseInputEvent): boolean
+    mouseMoved(evt: MouseMovedInputEvent): boolean
+}
+export interface MouseDragListener {
+    shouldDragLock(event: MouseBtnInputEvent): boolean
+    mouseDragged(evt: MouseDraggedInputEvent): boolean
+    mousePinched(evt: MousePinchedInputEvent): boolean
+    onDragEnd(event: MouseBtnInputEvent): boolean
+}
+export interface KeyListener {
+    keyPressed(evt: KeyboardInputEvent): boolean
+    keyReleased(evt: KeyboardInputEvent): boolean
+}
+export interface MouseBtnListener {
+    mouseWheel(delta: MouseScrolledInputEvent): boolean
+    mousePressed(evt: MouseBtnInputEvent): boolean
+    mouseReleased(evt: MouseBtnInputEvent): boolean
 }

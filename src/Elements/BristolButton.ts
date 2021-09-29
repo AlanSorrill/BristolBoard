@@ -1,13 +1,15 @@
 
-import { MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent } from "../BristolBoard";
+import { MouseMovedInputEvent } from "../BristolBoard";
 import {
+    MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent,
+    MouseBtnListener, MouseMovementListener,
     evalOptionalFunc, optFunc, UIFrameDescription_CornerWidthHeight,
     BristolFontFamily, BristolHAlign, BristolVAlign, UIElement, UIFrameResult,
     UIFrame_CornerWidthHeight, BristolBoard, FColor, optTransform, MouseState, evalOptionalTransfrom, MouseBtnInputEvent, MouseInputEvent, fColor
 } from "../BristolImports";
 
 
-export class UIButton extends UIElement {
+export class UIButton extends UIElement implements MouseMovementListener, MouseBtnListener {
     static uidCount = 0;
     paddingVertical: optFunc<number> = 32;
     paddingHorizontal: optFunc<number> = 64;
@@ -23,6 +25,7 @@ export class UIButton extends UIElement {
         this.onClick = onClick;
         this.text = text;
     }
+
     autoPadding(heightToTextSize: number = 0.25, widthToTextSize: number = 0.6) {
         let textSize = evalOptionalFunc(this.textSize, 24);
         this.paddingVertical = () => (textSize * heightToTextSize);
@@ -65,6 +68,7 @@ export class UIButton extends UIElement {
         this.brist.fillColor(evalOptionalTransfrom(this.foregroundColor, this.mouseState));
         this.brist.text(evalOptionalFunc(this.text), frame.centerX, frame.centerY);
     }
+
     mouseMoved(event: MouseInputEvent) {
         return true;
     }
@@ -85,23 +89,10 @@ export class UIButton extends UIElement {
         this.mouseState = MouseState.Gone;
         return true;
     }
-    shouldDragLock(event: MouseBtnInputEvent): boolean {
-        return false;
-    }
-    mouseDragged(evt: MouseDraggedInputEvent): boolean {
-        return false;
-    }
-    mousePinched(evt: MousePinchedInputEvent): boolean {
-        return false;
-    }
+
     mouseWheel(delta: MouseScrolledInputEvent): boolean {
         return false;
     }
-    keyPressed(evt: KeyboardInputEvent): boolean {
-        return false;
-    }
-    keyReleased(evt: KeyboardInputEvent): boolean {
-        return false;
-    }
+
 
 }

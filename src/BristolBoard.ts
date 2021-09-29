@@ -1,5 +1,5 @@
 
-import { UIFrameDescription } from ".";
+import { MouseBtnListener, MouseDragListener, MouseMovementListener, UIFrameDescription } from ".";
 import { LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML, UIElement, FGesture, Coordinate } from "./BristolImports";
 
 let log = logger.local('BristolBoard');
@@ -170,8 +170,8 @@ export class BristolBoard<RootElementType extends UIElement> {
     isKeyPressed(key: KeyboardInputKey): boolean {
         return this.keyboardState.get(key) || false;
     }
-    dragLockElement: UIElement = null;
-    mouseOverElement: UIElement = null;
+    dragLockElement: (UIElement & MouseDragListener) = null;
+    mouseOverElement: (UIElement & MouseMovementListener) = null;
     debuggerFlags: {
         uiFrameOutlines: boolean
     } = {
@@ -201,7 +201,31 @@ export class BristolBoard<RootElementType extends UIElement> {
 
         this.lastDrawTime = Date.now();
         this.canvas.element.addEventListener('wheel', (evt: WheelEvent) => {
-            ths.mouseScrolled(new MouseScrolledInputEvent(ths.iMouseX, ths.iMouseY, evt.deltaY));
+            var parentOffset = ths.canvas.offset();
+            //or $(this).offset(); if you really just want the current element's offset
+            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
+                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
+                let event = new MouseScrolledInputEvent(relX, relY, evt.deltaY);
+                
+                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
+                let currentElement: UIElement | (UIElement & MouseBtnListener)
+                ths.mouseBtnsPressed[evt.which] = false;
+                for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                        log.naughty(`Checking mouseWheel on ${overElements[i].id}`)
+                        if (currentElement.mouseWheel(event)) {
+                            break;
+                        }
+                    }
+                }
+                evt.preventDefault();
+
+
+            }
         })
         setTimeout(() => ths.refreshOrientation(), 1);
         window.addEventListener("orientationchange", function (event) {
@@ -252,33 +276,33 @@ export class BristolBoard<RootElementType extends UIElement> {
         //     }
         // })
 
-        document.addEventListener('keydown', (evt: KeyboardEvent) => {
+        // document.addEventListener('keydown', (evt: KeyboardEvent) => {
 
-            // var inputKey: KeyboardInputKey
-            // if(evt.shiftKey){
-            //     inputKey = KeyboardInputKey.shift;
-            // } else if(evt.ctrlKey){
-            //     inputKey = KeyboardInputKey.ctrl;
-            // } else if(evt.altKey){
-            //     inputKey = KeyboardInputKey.alt;
+        //     // var inputKey: KeyboardInputKey
+        //     // if(evt.shiftKey){
+        //     //     inputKey = KeyboardInputKey.shift;
+        //     // } else if(evt.ctrlKey){
+        //     //     inputKey = KeyboardInputKey.ctrl;
+        //     // } else if(evt.altKey){
+        //     //     inputKey = KeyboardInputKey.alt;
 
-            // } else {
-            //     inputKey = KeyboardInputKey[evt.key.toLowerCase()];
-            // }
-            this.keyboardState.set(evt.key, true);
-            let event = new KeyboardInputEvent(InputEventAction.Down, evt.key, this.isKeyPressed(KeyboardInputKey.shift), this.isKeyPressed(KeyboardInputKey.ctrl), this.isKeyPressed(KeyboardInputKey.alt))
-            if (ths.keyDown(event)) {
-                evt.preventDefault();
-            }
-        })
-        document.addEventListener('keyup', (evt: KeyboardEvent) => {
+        //     // } else {
+        //     //     inputKey = KeyboardInputKey[evt.key.toLowerCase()];
+        //     // }
+        //     this.keyboardState.set(evt.key, true);
+        //     let event = new KeyboardInputEvent(InputEventAction.Down, evt.key, this.isKeyPressed(KeyboardInputKey.shift), this.isKeyPressed(KeyboardInputKey.ctrl), this.isKeyPressed(KeyboardInputKey.alt))
+        //     if (ths.keyDown(event)) {
+        //         evt.preventDefault();
+        //     }
+        // })
+        // document.addEventListener('keyup', (evt: KeyboardEvent) => {
 
-            this.keyboardState.set(evt.key, false);
-            let event = new KeyboardInputEvent(InputEventAction.Down, evt.key, this.isKeyPressed(KeyboardInputKey.shift), this.isKeyPressed(KeyboardInputKey.ctrl), this.isKeyPressed(KeyboardInputKey.alt))
-            if (ths.keyUp(event)) {
-                evt.preventDefault();
-            }
-        })
+        //     this.keyboardState.set(evt.key, false);
+        //     let event = new KeyboardInputEvent(InputEventAction.Down, evt.key, this.isKeyPressed(KeyboardInputKey.shift), this.isKeyPressed(KeyboardInputKey.ctrl), this.isKeyPressed(KeyboardInputKey.alt))
+        //     if (ths.keyUp(event)) {
+        //         evt.preventDefault();
+        //     }
+        // })
         document.addEventListener('mousemove', (evt: MouseEvent) => {
             var parentOffset = ths.canvas.offset();
             //or $(this).offset(); if you really just want the current element's offset
@@ -302,7 +326,7 @@ export class BristolBoard<RootElementType extends UIElement> {
 
 
 
-            let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+            let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
             if (this.mouseOverElement != null) {
                 if (!this.mouseOverElement.frame.isInside(relX, relY)) {
@@ -311,17 +335,20 @@ export class BristolBoard<RootElementType extends UIElement> {
                     this.mouseOverElement = null;
                 }
             }
+            let currentElement: UIElement | (UIElement & MouseMovementListener)
             for (let i = 0; i < overElements.length; i++) {
-
-                if (overElements[i].mouseMoved(event)) {
-                    if (this.mouseOverElement != null) {
-                        this.mouseOverElement.mouseExit(event);
+                currentElement = overElements[i]
+                if (UIElement.hasMouseMovementListener(currentElement)) {
+                    if (currentElement.mouseMoved(event)) {
+                        if (this.mouseOverElement != null) {
+                            this.mouseOverElement.mouseExit(event);
+                        }
+                        this.mouseOverElement = currentElement;
+                        this.mouseOverElement.isMouseTarget = true;
+                        this.mouseOverElement.mouseEnter(event);
+                        evt.preventDefault();
+                        break;
                     }
-                    this.mouseOverElement = overElements[i];
-                    this.mouseOverElement.isMouseTarget = true;
-                    this.mouseOverElement.mouseEnter(event);
-                    evt.preventDefault();
-                    break;
                 }
             }
 
@@ -340,14 +367,23 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
                 ths.mouseBtnsPressed[evt.which] = true;
+
+                let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+
                 for (let i = 0; i < overElements.length; i++) {
-                    if (overElements[i].shouldDragLock(event)) {
-                        ths.dragLockElement = overElements[i];
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseDragListener(currentElement)) {
+                        if (currentElement.shouldDragLock(event)) {
+                            ths.dragLockElement = currentElement
+                        }
                     }
-                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
-                    if (overElements[i].mousePressed(event)) {
-                        break;
+                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                        log.naughty(`Checking mousePressed on ${currentElement.id}`)
+                        if (currentElement.mousePressed(event)) {
+                            break;
+                        }
                     }
+
                 }
                 evt.preventDefault();
 
@@ -367,11 +403,15 @@ export class BristolBoard<RootElementType extends UIElement> {
                 }
                 let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
+                let currentElement: UIElement | (UIElement & MouseBtnListener)
                 ths.mouseBtnsPressed[evt.which] = false;
                 for (let i = 0; i < overElements.length; i++) {
-                    log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
-                    if (overElements[i].mouseReleased(event)) {
-                        break;
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                        log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
+                        if (currentElement.mouseReleased(event)) {
+                            break;
+                        }
                     }
                 }
                 evt.preventDefault();
@@ -389,13 +429,16 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Down);
                 ths.mouseBtnsPressed[0] = true;
-                for (let i = 0; i < overElements.length; i++) {
-                    if (overElements[i].shouldDragLock(event)) {
-                        ths.dragLockElement = overElements[i];
-                    }
-                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
-                    if (overElements[i].mousePressed(event)) {
 
+                let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+                for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.shouldDragLock(event)) {
+                        ths.dragLockElement = currentElement
+                    }
+
+                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
+                    if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mousePressed(event)) {
                         break;
                     }
                 }
@@ -417,9 +460,11 @@ export class BristolBoard<RootElementType extends UIElement> {
                     ths.dragLockElement = null;
                 }
                 ths.mouseBtnsPressed[0] = false;
+                let currentElement: UIElement | (UIElement & MouseBtnListener)
                 for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
                     log.debug(`Checking mouseReleased on ${overElements[i].id}`)
-                    if (overElements[i].mouseReleased(event)) {
+                    if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mouseReleased(event)) {
                         break;
                     }
                 }
@@ -438,9 +483,11 @@ export class BristolBoard<RootElementType extends UIElement> {
                 }
                 let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
 
+                let currentElement: UIElement | (UIElement & MouseDragListener)
                 for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
                     log.naughty(`Checking mouseDragged on ${overElements[i].id}`)
-                    if (overElements[i].mouseDragged(event)) {
+                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.mouseDragged(event)) {
                         break;
                     }
                 }
@@ -456,9 +503,11 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                 let event = new MousePinchedInputEvent(pos.x, pos.y, 1, dragDelta.x, dragDelta.y, pinchDelta.x, pinchDelta.y);
 
+                let currentElement: UIElement | (UIElement & MouseDragListener)
                 for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
                     log.naughty(`Checking mousePinched on ${overElements[i].id}`)
-                    if (overElements[i].mousePinched(event)) {
+                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.mousePinched(event)) {
                         break;
                     }
                 }
@@ -481,21 +530,21 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
 
     rootElement: RootElementType = null;
-    mousePressed(evt: MouseBtnInputEvent) {
-        return this.rootElement.mousePressed(evt);
-    }
-    mouseReleased(evt: MouseBtnInputEvent) {
-        return this.rootElement.mouseReleased(evt);
-    }
-    mouseMoved(event: MouseMovedInputEvent) {
-        return false;
-    }
-    keyUp(event: KeyboardInputEvent): boolean {
-        return false;
-    }
-    keyDown(event: KeyboardInputEvent): boolean {
-        return false;
-    }
+    // mousePressed(evt: MouseBtnInputEvent) {
+    //     return this.rootElement.mousePressed(evt);
+    // }
+    // mouseReleased(evt: MouseBtnInputEvent) {
+    //     return this.rootElement.mouseReleased(evt);
+    // }
+    // mouseMoved(event: MouseMovedInputEvent) {
+    //     return false;
+    // }
+    // keyUp(event: KeyboardInputEvent): boolean {
+    //     return false;
+    // }
+    // keyDown(event: KeyboardInputEvent): boolean {
+    //     return false;
+    // }
     pixelDensity(): number {
         return window.devicePixelRatio;
     }
@@ -809,9 +858,9 @@ export class BristolBoard<RootElementType extends UIElement> {
         let textWidth = Math.abs(textMetrics.actualBoundingBoxLeft) +
             Math.abs(textMetrics.actualBoundingBoxRight);
         while (textWidth > maxWidth) {
-            if(perferredSize <= 0){
+            if (perferredSize <= 0) {
                 perferredSize = 1;
-            this.textSize(perferredSize);
+                this.textSize(perferredSize);
                 break;
             }
             perferredSize -= stepSize;
@@ -865,14 +914,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
     // fillRectFrame(frame: UIFrame) {
     //     return this.ctx.fillRect(frame.leftX(), frame.topY(), frame.measureWidth(), frame.measureHeight());
-    // }
-    mouseScrolled(event: MouseScrolledInputEvent) {
 
-    }
-
-    mouseDragged(event: MouseDraggedInputEvent) {
-
-    }
 
     //overridable methods--------------------------------------------------
     shouldExecJobs(): boolean {

@@ -1,4 +1,4 @@
-import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent } from './BristolImports'
+import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from './BristolImports'
 
 
 export abstract class UIElement {
@@ -22,13 +22,13 @@ export abstract class UIElement {
     }
 
 
-    get depth() {
+    get depth(): number {
         if (this.parent == null || this.parent instanceof BristolBoard) {
             return this.zOffset;
-        }
-
-        if (this.parent instanceof UIElement) {
+        } else if (this.parent instanceof UIElement) {
             return this.parent.depth + 1 + this.zOffset;
+        } else {
+            return this.zOffset;
         }
     }
     constructor(uid: string, uiFrame: UIFrame | UIFrameDescription, brist: BristolBoard<any>) {
@@ -111,7 +111,7 @@ export abstract class UIElement {
         let frame = this.frame.lastResult;
         this.onDrawBackground(frame, deltaTime);
 
-        this.cElements.forEach((elem: UIElement) => {
+        this.forEachVisibleChild((elem: UIElement) => {
 
             if (elem.frame.isVisible()) {
                 elem.draw(deltaTime);
@@ -143,12 +143,19 @@ export abstract class UIElement {
     findElementsUnderCursor(x: number, y: number, found: UIElement[] = []) {
         if (this.frame.isInside(x, y) && this.frame.isVisible()) {
             found.push(this);
-            this.cElements.forEach((elem: UIElement) => {
+            this.forEachVisibleChild((elem: UIElement) => {
                 elem.findElementsUnderCursor(x, y, found);
             })
             return found;
         }
 
+    }
+    forEachVisibleChild(onEach: (elem: UIElement, index: number) => void) {
+        this.cElements.forEach((value: UIElement, ind: number) => {
+            if (value.frame.isVisible()) {
+                onEach(value, ind);
+            }
+        })
     }
     get isDragLocked() {
         return this.brist.dragLockElement?.id == this.id;
@@ -239,20 +246,18 @@ export abstract class UIElement {
         }
         return this.frame.measureHeight();
     }
-    static hasListener<T>(target: any, functionName: string): target is T {
-        return (typeof target[functionName] == 'function')
-    }
+    
     static hasMouseMovementListener(target: UIElement): target is (UIElement & MouseMovementListener) {
-        return UIElement.hasListener<MouseMovementListener>(target, 'mouseEnter')
+        return IsType<MouseMovementListener>(target, 'mouseEnter')
     }
     static hasMouseBtnListener(target: UIElement): target is (UIElement & MouseBtnListener) {
-        return UIElement.hasListener<MouseBtnListener>(target, 'mousePressed')
+        return IsType<MouseBtnListener>(target, 'mousePressed')
     }
     static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
-        return UIElement.hasListener<MouseDragListener>(this, 'mouseDragged')
+        return IsType<MouseDragListener>(this, 'mouseDragged')
     }
     static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {
-        return UIElement.hasListener<KeyListener>(this, 'keyReleased')
+        return IsType<KeyListener>(this, 'keyReleased')
     }
 }
 export enum MouseState {

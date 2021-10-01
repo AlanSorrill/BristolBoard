@@ -18,6 +18,9 @@ declare global {
 
 
 }
+export function IsType<T>(target: any, memberName: string): target is T {
+    return (typeof target[memberName] != 'undefined')
+}
 //t: title, v: value
 export type optFunc<T> = (T | (() => T)) | { t: string, v: optFunc<T> };
 export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTransform<I, O> };

@@ -254,10 +254,10 @@ export abstract class UIElement {
         return IsType<MouseBtnListener>(target, 'mousePressed')
     }
     static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
-        return IsType<MouseDragListener>(this, 'mouseDragged')
+        return IsType<MouseDragListener>(target, 'mouseDragged')
     }
     static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {
-        return IsType<KeyListener>(this, 'keyReleased')
+        return IsType<KeyListener>(target, 'keyReleased')
     }
 }
 export enum MouseState {

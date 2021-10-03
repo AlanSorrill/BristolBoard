@@ -31,14 +31,16 @@ export abstract class UIElement {
             return this.zOffset;
         }
     }
-    constructor(uid: string, uiFrame: UIFrame | UIFrameDescription, brist: BristolBoard<any>) {
+    constructor(uid: string, uiFrame: UIFrame | UIFrameDescription | (<THIS extends UIElement>(element: THIS)=>(UIFrame | UIFrameDescription)), brist: BristolBoard<any>) {
         this.id = uid;
         this.brist = brist;
+        if(typeof uiFrame == 'function'){
+            uiFrame = uiFrame(this);
+        }
         // this.panel = panel;
         if (uiFrame instanceof UIFrame) {
             this.frame = uiFrame;
         } else {
-
             this.frame = UIFrame.Build(uiFrame);
         }
     }
@@ -99,7 +101,7 @@ export abstract class UIElement {
             width: ths.frame.measureWidth(),
             height: ths.frame.measureHeight()
         }
-        this.cElements.forEach((elem: UIElement) => {
+        this.forEachVisibleChild((elem: UIElement) => {
 
             if (elem.frame.isVisible()) {
                 elem.measure(deltaTime);
@@ -130,16 +132,16 @@ export abstract class UIElement {
     }
     onRemoveFromParent() {
     }
-    onPanelShow() {
-        this.cElements.forEach((elem: UIElement) => {
-            elem.onPanelShow();
-        })
-    }
-    onPanelHide() {
-        this.cElements.forEach((elem: UIElement) => {
-            elem.onPanelHide();
-        })
-    }
+    // onPanelShow() {
+    //     this.cElements.forEach((elem: UIElement) => {
+    //         elem.onPanelShow();
+    //     })
+    // }
+    // onPanelHide() {
+    //     this.cElements.forEach((elem: UIElement) => {
+    //         elem.onPanelHide();
+    //     })
+    // }
     findElementsUnderCursor(x: number, y: number, found: UIElement[] = []) {
         if (this.frame.isInside(x, y) && this.frame.isVisible()) {
             found.push(this);
@@ -191,7 +193,7 @@ export abstract class UIElement {
             // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
 
             if (drawChildFrames) {
-                this.cElements.forEach((elem: UIElement) => {
+                this.forEachVisibleChild((elem: UIElement) => {
                     elem.drawUIFrame(true, weight);
                 })
 

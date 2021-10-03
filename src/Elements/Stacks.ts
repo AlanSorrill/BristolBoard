@@ -16,6 +16,8 @@ export interface UIStackOptions<DataType, ChildType extends UIElement> {
 export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement {
     options: UIStackOptions<DataType, ChildType>
     rootElement: UIStackChildContainer<ChildType>
+    rootIndex: number = 0
+    rootOffset: number = 0;
     source: { count: () => number; get: (index: number) => DataType; };
     onDrawBackground(frame: UIFrameResult, deltaTime: number): void {
         this.brist.ctx.save();
@@ -26,18 +28,41 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         this.brist.ctx.restore();
     }
 
-    constructor(source: {count: ()=>number, get: (index: number)=>DataType},options: UIStackOptions<DataType, ChildType>, frame: UIFrame_CornerWidthHeight, brist: BristolBoard<any>) {
+    constructor(source: { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame_CornerWidthHeight, brist: BristolBoard<any>) {
         super(UIElement.createUID('stack'), frame, brist);
         this.options = options;
         this.source = source;
-        this.rootElement = new UIStackChildContainer(this,brist);
+        this.rootElement = new UIStackChildContainer(this, brist);
     }
-    invalidateData(){
+    invalidateData() {
         this.rootElement = new UIStackChildContainer(this, this.brist);
         let count = this.source.count();
-        for(let i = 0;i<count;i++){
+        for (let i = 0; i < count; i++) {
 
         }
+    }
+    measure(deltaTime: number) {
+        let ths = this;
+        this.frame.lastResult = {
+            left: ths.frame.leftX(),
+            right: ths.frame.rightX(),
+            top: ths.frame.topY(),
+            bottom: ths.frame.bottomY(),
+            centerX: ths.frame.centerX(),
+            centerY: ths.frame.centerY(),
+            width: ths.frame.measureWidth(),
+            height: ths.frame.measureHeight()
+        }
+        let elem = this.rootElement;
+        // elem.frame.lastResult = {
+        //     left
+        // }
+        this.forEachVisibleChild((elem: UIElement) => {
+
+            if (elem.frame.isVisible()) {
+                elem.measure(deltaTime);
+            }
+        })
     }
     forEachVisibleChild(onEach: (elem: UIElement, index: number) => void) {
         this.cElements.forEach((value: UIElement, ind: number) => {
@@ -48,16 +73,44 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     }
 }
 export class UIStackChildContainer<ChildType extends UIElement> extends UIElement {
-    next: UIStackChildContainer<any>
-    last: UIStackChildContainer<any>
+    
+    next: UIStackChildContainer<any> = null;
+    last: UIStackChildContainer<any> = null;
     child: ChildType
+    parent: UIStackRecycler<any,ChildType>
+    get index(): number{
+        if(this.last != null){
+            return this.last.index + 1;
+        }
+        this.parent.rootIndex;
+    }
     onDrawBackground(frame: UIFrameResult, deltaTime: number): void {
     }
     onDrawForeground(frame: UIFrameResult, deltaTime: number): void {
     }
-    constructor(parent: UIStackRecycler<any,ChildType>, brist: BristolBoard<any>) {
-        super(UIElement.createUID('uiStackChildContainer'), (ths) => UIFrame.Build({ x: 0, y: 0 }), brist);
-        this.child = parent.options.buildChild();
+    frame: UIFrame_CornerWidthHeight
+    constructor(parent: UIStackRecycler<any, ChildType>, brist: BristolBoard<any>) {
+        super(UIElement.createUID('uiStackChildContainer'), (thus) => {
+            let ths: UIStackChildContainer<ChildType> = thus as any;
+            if (parent.options.isVertical) {
+                let out = UIFrame.Build({ x: 0, y: ()=>{
+                    if(ths.last != null){
+                        return 0;//ths.last.frame.description.y
+                    }
+                    return 0;
+                }, width: ()=>ths.width, height: ()=>parent.options.childLength(ths.index) })
+                out.visible
+                return out;
+            } else {
+
+            }
+
+        }, brist);
+        let ths = this;
+        this.child = parent.options.buildChild(UIFrame.Build({
+            x: 0, y: 0, width: () => ths.width, height: () => ths.height
+        }), brist);
+        this.addChild(this.child);
     }
 
 }

@@ -17,4 +17,7 @@ export * from './FColor'
 export * from './FGesture'
 export * from './Elements/BristolButton'
 export * from './Elements/Stacks'
-export * from './BristolBoard'
+export * from './Core/BristolBoard'
+
+export * from './Core/BristolEnums'
+export * from './Core/BristolInput'

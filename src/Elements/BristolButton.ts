@@ -1,5 +1,4 @@
 
-import { MouseMovedInputEvent } from "../BristolBoard";
 import {
     MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent,
     MouseBtnListener, MouseMovementListener,
@@ -35,7 +34,7 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
     autoWidth() {
         let ths = this;
         (this.frame as UIFrame_CornerWidthHeight).description.width = () => {
-            ths.setupFont(ths.frame.lastResult);
+            ths.setupFont(ths.frame.result);
             return ths.brist.ctx.measureText(evalOptionalFunc(this.text)).width + evalOptionalFunc(this.paddingHorizontal) * 2;
         }
         return this;
@@ -43,7 +42,7 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
     autoHeight() {
         let ths = this;
         (this.frame as UIFrame_CornerWidthHeight).description.height = () => {
-            ths.setupFont(ths.frame.lastResult);
+            ths.setupFont(ths.frame.result);
             let textMetrics = ths.brist.ctx.measureText(evalOptionalFunc(this.text))
             return textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent + evalOptionalFunc(this.paddingVertical) * 2;
         }

@@ -1,3 +1,4 @@
+import { BristolFontFamily, BristolHAlign, BristolVAlign, FColor } from '.';
 import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from './BristolImports'
 
 
@@ -6,7 +7,7 @@ export abstract class UIElement {
 
     id: string;
     parent: UIElement | BristolBoard<any> = null;
-    cElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
+    childElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
     // childElements: Array<UIElement> = [];
     zOffset: number = 0;
     frame: UIFrame;
@@ -31,10 +32,10 @@ export abstract class UIElement {
             return this.zOffset;
         }
     }
-    constructor(uid: string, uiFrame: UIFrame | UIFrameDescription | (<THIS extends UIElement>(element: THIS)=>(UIFrame | UIFrameDescription)), brist: BristolBoard<any>) {
+    constructor(uid: string, uiFrame: UIFrame | UIFrameDescription | (<THIS extends UIElement>(element: THIS) => (UIFrame | UIFrameDescription)), brist: BristolBoard<any>) {
         this.id = uid;
         this.brist = brist;
-        if(typeof uiFrame == 'function'){
+        if (typeof uiFrame == 'function') {
             uiFrame = uiFrame(this);
         }
         // this.panel = panel;
@@ -46,7 +47,7 @@ export abstract class UIElement {
     }
 
     findChild(childId: string) {
-        return this.cElements.find((elem) => (elem.id == childId));
+        return this.childElements.find((elem) => (elem.id == childId));
         // for (let i = 0; i < this.childElements.length; i++) {
         //     if (this.childElements[i].id == childId) {
         //         return this.childElements[i];
@@ -59,7 +60,7 @@ export abstract class UIElement {
 
         // index = this.childElements.push(childElement) - 1;
 
-        let i = this.cElements.add(childElement);
+        let i = this.childElements.add(childElement);
         childElement.parent = this;
         childElement.frame.parent = this.frame;
         childElement.onAddToParent();
@@ -75,7 +76,7 @@ export abstract class UIElement {
         }
     }
     removeUIElement(childId: string) {
-        this.cElements.remove((elem: UIElement) => (elem.id == childId))
+        this.childElements.remove((elem: UIElement) => (elem.id == childId))
         // for (let i = 0; i < this.childElements.length; i++) {
         //     if (this.childElements[i].id == childId) {
         //         this.childElements[i].onRemoveFromParent();
@@ -86,12 +87,12 @@ export abstract class UIElement {
     }
 
     clearChildElements() {
-        this.cElements.clear();
+        this.childElements.clear();
 
     }
     measure(deltaTime: number) {
         let ths = this;
-        this.frame.lastResult = {
+        this.frame.result = {
             left: ths.frame.leftX(),
             right: ths.frame.rightX(),
             top: ths.frame.topY(),
@@ -110,7 +111,7 @@ export abstract class UIElement {
     }
 
     draw(deltaTime: number) {
-        let frame = this.frame.lastResult;
+        let frame = this.frame.result;
         this.onDrawBackground(frame, deltaTime);
 
         this.forEachVisibleChild((elem: UIElement) => {
@@ -132,28 +133,24 @@ export abstract class UIElement {
     }
     onRemoveFromParent() {
     }
-    // onPanelShow() {
-    //     this.cElements.forEach((elem: UIElement) => {
-    //         elem.onPanelShow();
-    //     })
-    // }
-    // onPanelHide() {
-    //     this.cElements.forEach((elem: UIElement) => {
-    //         elem.onPanelHide();
-    //     })
-    // }
-    findElementsUnderCursor(x: number, y: number, found: UIElement[] = []) {
+
+    findElementsUnderCursor(x: number, y: number, found: UIElement[] = [], dontCheckChildrenIfOutsideBounds = false) {
         if (this.frame.isInside(x, y) && this.frame.isVisible()) {
             found.push(this);
+            dontCheckChildrenIfOutsideBounds = false;
+        }
+        if (!dontCheckChildrenIfOutsideBounds) {
             this.forEachVisibleChild((elem: UIElement) => {
                 elem.findElementsUnderCursor(x, y, found);
             })
-            return found;
         }
+        return found;
+
 
     }
+
     forEachVisibleChild(onEach: (elem: UIElement, index: number) => void) {
-        this.cElements.forEach((value: UIElement, ind: number) => {
+        this.childElements.forEach((value: UIElement, ind: number) => {
             if (value.frame.isVisible()) {
                 onEach(value, ind);
             }
@@ -163,10 +160,7 @@ export abstract class UIElement {
         return this.brist.dragLockElement?.id == this.id;
     }
 
-
-
-
-    private dfc = null;
+    private dfc: FColor = null;
     get debugFrameColor() {
         if (this.dfc == null) {
             let colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan'];
@@ -177,21 +171,24 @@ export abstract class UIElement {
         }
         return this.dfc;
     }
-    drawUIFrame(drawChildFrames: boolean = true, weight: number = 1) {
+    drawUIFrame(drawChildFrames: boolean = true, weight: number = 1, showNames: boolean = true) {
         if (this.frame.isVisible()) {
             this.brist.strokeColor(this.debugFrameColor);
             this.brist.strokeWeight(weight);
-            this.brist.ellipse(this.frame.leftX(), this.frame.topY(), weight * 2, weight * 2);
-            this.brist.line(this.frame.leftX(), this.frame.topY(), this.frame.rightX(), this.frame.topY());
-            this.brist.ellipse(this.frame.rightX(), this.frame.topY(), weight * 2, weight * 2);
-            this.brist.line(this.frame.rightX(), this.frame.topY(), this.frame.rightX(), this.frame.bottomY());
-            this.brist.ellipse(this.frame.rightX(), this.frame.bottomY(), weight * 2, weight * 2);
-            this.brist.line(this.frame.rightX(), this.frame.bottomY(), this.frame.leftX(), this.frame.bottomY());
-            this.brist.ellipse(this.frame.leftX(), this.frame.bottomY(), weight * 2, weight * 2);
-            this.brist.line(this.frame.leftX(), this.frame.bottomY(), this.frame.leftX(), this.frame.topY());
-            this.brist.ellipse(this.frame.centerX(), this.frame.centerY(), weight * 2, weight * 2);
+            this.brist.ellipse(this.frame.result.left, this.frame.result.top, weight * 2, weight * 2);
+            this.brist.line(this.frame.result.left, this.frame.result.top, this.frame.result.right, this.frame.result.top);
+            this.brist.ellipse(this.frame.result.right, this.frame.result.top, weight * 2, weight * 2);
+            this.brist.line(this.frame.result.right, this.frame.result.top, this.frame.result.right, this.frame.result.bottom);
+            this.brist.ellipse(this.frame.result.right, this.frame.result.bottom, weight * 2, weight * 2);
+            this.brist.line(this.frame.result.right, this.frame.result.bottom, this.frame.result.left, this.frame.result.bottom);
+            this.brist.ellipse(this.frame.result.left, this.frame.result.bottom, weight * 2, weight * 2);
+            this.brist.line(this.frame.result.left, this.frame.result.bottom, this.frame.result.left, this.frame.result.top);
+            this.brist.ellipse(this.frame.result.centerX, this.frame.result.centerY, weight * 2, weight * 2);
             // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
-
+            this.brist.fontFamily(BristolFontFamily.Roboto);
+            this.brist.textSize(12);
+            this.brist.textAlign(BristolHAlign.Left, BristolVAlign.Top);
+            this.brist.text(this.id, this.frame.result.left, this.frame.result.top)
             if (drawChildFrames) {
                 this.forEachVisibleChild((elem: UIElement) => {
                     elem.drawUIFrame(true, weight);
@@ -201,54 +198,54 @@ export abstract class UIElement {
         }
     }
     get left() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.left;
+        if (this.frame.result != null) {
+            return this.frame.result.left;
         }
         return this.frame.leftX();
     }
     get right() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.right;
+        if (this.frame.result != null) {
+            return this.frame.result.right;
         }
         return this.frame.rightX();
     }
     get top() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.top;
+        if (this.frame.result != null) {
+            return this.frame.result.top;
         }
         return this.frame.topY();
     }
     get bottom() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.bottom;
+        if (this.frame.result != null) {
+            return this.frame.result.bottom;
         }
-        return this.frame.bottomY();
+        return this.frame.result.bottom;
     }
     get centerX() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.centerX;
+        if (this.frame.result != null) {
+            return this.frame.result.centerX;
         }
         return this.frame.centerX();
     }
     get centerY() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.centerY;
+        if (this.frame.result != null) {
+            return this.frame.result.centerY;
         }
         return this.frame.centerY();
     }
     get width() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.width;
+        if (this.frame.result != null) {
+            return this.frame.result.width;
         }
         return this.frame.measureWidth();
     }
     get height() {
-        if (this.frame.lastResult != null) {
-            return this.frame.lastResult.height;
+        if (this.frame.result != null) {
+            return this.frame.result.height;
         }
         return this.frame.measureHeight();
     }
-    
+
     static hasMouseMovementListener(target: UIElement): target is (UIElement & MouseMovementListener) {
         return IsType<MouseMovementListener>(target, 'mouseEnter')
     }

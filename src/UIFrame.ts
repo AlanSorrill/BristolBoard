@@ -17,7 +17,7 @@ export abstract class UIFrame {
         return evalOptionalFunc(this.visible)
     }
 
-    lastResult: UIFrameResult = null;
+    result: UIFrameResult = null;
     abstract leftX(): number
 
 
@@ -40,7 +40,21 @@ export abstract class UIFrame {
         return (this.bottomY() + this.topY()) / 2
     }
 
-    getCornerX(corner: UICorner) {
+    getCornerX(corner: UICorner, useResult = false) {
+        if (useResult && this.result != null) {
+            switch (corner) {
+                case UICorner.upLeft:
+                    return this.result.left;
+                case UICorner.upRight:
+                    return this.result.right;
+                case UICorner.downRight:
+                    return this.result.right;
+                case UICorner.downLeft:
+                    return this.result.left;
+                case UICorner.center:
+                    return this.result.centerX;
+            }
+        }
         switch (corner) {
             case UICorner.upLeft:
                 return this.leftX();
@@ -54,7 +68,21 @@ export abstract class UIFrame {
                 return this.centerX();
         }
     }
-    getCornerY(corner: UICorner) {
+    getCornerY(corner: UICorner, useResult = false) {
+        if(useResult && this.result != null){
+            switch (corner) {
+                case UICorner.upLeft:
+                    return this.result.top;
+                case UICorner.upRight:
+                    return this.result.top;
+                case UICorner.downRight:
+                    return this.result.bottom;
+                case UICorner.downLeft:
+                    return this.result.bottom;
+                case UICorner.center:
+                    return this.result.centerY;
+            }
+        }
         switch (corner) {
             case UICorner.upLeft:
                 return this.topY();
@@ -92,6 +120,9 @@ export enum UICorner {
 export class UIFrame_CornerWidthHeight extends UIFrame {
     description: UIFrameDescription_CornerWidthHeight;
     isInside(x: number, y: number): boolean {
+        if (this.result != null) {
+            return (x >= this.result.left && x <= this.result.right) && (y >= this.result.top && y <= this.result.bottom)
+        }
         return (x >= this.leftX() && x <= this.rightX()) && (y >= this.topY() && y <= this.bottomY())
     }
     leftX(): number {
@@ -119,8 +150,8 @@ export class UIFrame_CornerWidthHeight extends UIFrame {
             case UICorner.upLeft:
             case UICorner.upRight:
                 return this.y;
-                case UICorner.center:
-                    return this.y - (evalOptionalFunc(this.description.height) / 2);
+            case UICorner.center:
+                return this.y - (evalOptionalFunc(this.description.height) / 2);
         }
     }
     rightX(): number {
@@ -133,8 +164,8 @@ export class UIFrame_CornerWidthHeight extends UIFrame {
             case UICorner.upRight:
             case UICorner.downRight:
                 return this.x;
-                case UICorner.center:
-                    return this.x + (evalOptionalFunc(this.description.width) / 2);
+            case UICorner.center:
+                return this.x + (evalOptionalFunc(this.description.width) / 2);
         }
     }
 
@@ -150,7 +181,7 @@ export class UIFrame_CornerWidthHeight extends UIFrame {
             case UICorner.upRight:
                 return this.y + evalOptionalFunc(this.description.height);
 
-                
+
             case UICorner.center:
                 return this.y + (evalOptionalFunc(this.description.height) / 2);
         }
@@ -178,10 +209,10 @@ export class UIFrame_CornerWidthHeight extends UIFrame {
     }
 
     get x(): number {
-        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.x) : (this.hasParent ? evalOptionalFunc(this.description.x) + this.parent.getCornerX(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft)) : evalOptionalFunc(this.description.x));
+        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.x) : (this.hasParent ? evalOptionalFunc(this.description.x) + this.parent.getCornerX(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft),true) : evalOptionalFunc(this.description.x));
     }
     get y(): number {
-        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.y) : (this.hasParent ? evalOptionalFunc(this.description.y) + this.parent.getCornerY(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft)) : evalOptionalFunc(this.description.y));
+        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.y) : (this.hasParent ? evalOptionalFunc(this.description.y) + this.parent.getCornerY(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft),true) : evalOptionalFunc(this.description.y));
     }
     constructor(description: UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
         super();

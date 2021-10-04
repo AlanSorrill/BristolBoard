@@ -83,12 +83,12 @@ export class FColor {
         return (this.aa / this.total) * 255
     }
     get hasChanged(): boolean {
-        return (this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
+        return this.oldStr == null;(this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
     }
     private genStr() {
         this.oldStr = `rgb${this.a != -1 ? 'a' : ''}(${this.r}, ${this.g}, ${this.b}${this.a != -1 ? (', ' + this.a) : ''})`;
     }
-    private oldStr: string;
+    private oldStr: string = null;
     private oldVals: [number, number, number, number] = [-1, -1, -1, -1];
     toHexString() {
         if (this.hasChanged) {

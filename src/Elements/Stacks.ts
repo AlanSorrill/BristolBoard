@@ -1,7 +1,5 @@
-import { IsType, MouseDragListener, UIFrame } from '..';
-import { MouseBtnInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent } from '../BristolBoard';
-import { BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc } from '../BristolImports'
-import { UIFrameResult } from '../UIFrame';
+import { UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame } from '../BristolImports'
+
 export interface UIFrameDescription_StackChild {
     width: optFunc<number>
     height: optFunc<number>
@@ -12,13 +10,22 @@ export interface UIStackOptions<DataType, ChildType extends UIElement> {
     bindData: (index: number, data: DataType, child: ChildType) => void
     isVertical: boolean
 }
-
+export interface UIStackRecyclerSource<DataType> {
+    count: () => number; get: (index: number) => DataType;
+}
 export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement {
     options: UIStackOptions<DataType, ChildType>
+    extraElements: UIStackChildContainer<ChildType>[] = [] 
     rootElement: UIStackChildContainer<ChildType>
     rootIndex: number = 0
     rootOffset: number = 0;
-    source: { count: () => number; get: (index: number) => DataType; };
+    source: UIStackRecyclerSource<DataType>;
+    static SourceFromArray<DataType>(data: DataType[]) {
+        return {
+            count: () => data.length,
+            get: (index: number) => data[index]
+        }
+    }
     onDrawBackground(frame: UIFrameResult, deltaTime: number): void {
         this.brist.ctx.save();
         this.brist.ctx.rect(frame.left, frame.top, frame.width, frame.height);
@@ -28,11 +35,20 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         this.brist.ctx.restore();
     }
 
-    constructor(source: { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame_CornerWidthHeight, brist: BristolBoard<any>) {
+    constructor(source: DataType[] | { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame, brist: BristolBoard<any>) {
         super(UIElement.createUID('stack'), frame, brist);
         this.options = options;
-        this.source = source;
+        if (IsType<UIStackRecyclerSource<DataType>>(source, 'count')) {
+            this.source = source;
+        } else {
+            this.source = UIStackRecycler.SourceFromArray(source);
+        }
         this.rootElement = new UIStackChildContainer(this, brist);
+        this.rootElement.parent = this;
+        this.rootElement.onAddToParent();
+        //childElement.frame.parent = this.frame;
+        //childElement.onAddToParent();
+        this.options.bindData(0, this.source.get(0), this.rootElement.child);
     }
     invalidateData() {
         this.rootElement = new UIStackChildContainer(this, this.brist);
@@ -41,9 +57,16 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
 
         }
     }
+    private fixFrame(frame: UIFrameResult) {
+        frame.centerX = (frame.left + frame.right) / 2
+        frame.centerY = (frame.top + frame.bottom) / 2
+        frame.width = (frame.right - frame.left)
+        frame.height = (frame.bottom - frame.top)
+        return frame;
+    }
     measure(deltaTime: number) {
         let ths = this;
-        this.frame.lastResult = {
+        this.frame.result = {
             left: ths.frame.leftX(),
             right: ths.frame.rightX(),
             top: ths.frame.topY(),
@@ -53,33 +76,101 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             width: ths.frame.measureWidth(),
             height: ths.frame.measureHeight()
         }
-        let elem = this.rootElement;
-        // elem.frame.lastResult = {
-        //     left
-        // }
-        this.forEachVisibleChild((elem: UIElement) => {
 
-            if (elem.frame.isVisible()) {
-                elem.measure(deltaTime);
+        let elem = this.rootElement;
+
+        if (this.options.isVertical) {
+            elem.frame.result = {
+                left: ths.frame.result.left,
+                right: ths.frame.result.right,
+                top: ths.frame.result.top + ths.rootOffset,
+                bottom: ths.frame.result.top + ths.rootOffset + ths.options.childLength(ths.rootIndex),
+                centerX: 0,
+                centerY: 0,
+                width: 0,
+                height: 0
             }
-        })
+
+
+        } else {
+            elem.frame.result = {
+                left: ths.rootOffset,
+                right: ths.rootOffset + ths.options.childLength(ths.rootIndex),
+                top: ths.frame.result.top,
+                bottom: ths.frame.result.bottom,
+                centerX: 0,
+                centerY: 0,
+                width: 0,
+                height: 0
+            }
+        }
+        elem.frame.result = this.fixFrame(elem.frame.result);
+        elem.child.frame.parent = elem.frame;
+        elem.child.measure(deltaTime);
+        let index = this.rootIndex + 1;
+        elem = elem.next;
+        while (elem != null) {
+            if (this.options.isVertical) {
+                elem.frame.result = {
+                    top: elem.last.frame.result.bottom,
+                    bottom: elem.last.frame.result.bottom + ths.options.childLength(index),
+                    left: ths.frame.result.left,
+                    right: ths.frame.result.right,
+                    centerX: 0,
+                    centerY: 0,
+                    width: 0,
+                    height: 0
+                };
+
+            } else { }
+            elem.frame.result = this.fixFrame(elem.frame.result);
+            elem.child.frame.parent = elem.frame;
+            elem.child.measure(deltaTime);
+            if (elem.next != null) {
+                elem = elem.next;
+                index++;
+            } else {
+                break;
+            }
+        }
+        if (elem != null) {
+            if (this.options.isVertical) {
+                if (elem.frame.result.bottom < ths.frame.result.bottom) {
+                    //needs more elements
+                } else if (elem.frame.result.top > ths.frame.result.bottom) {
+                    //needs less elements
+                }
+
+            } else {
+
+            }
+        }
+
+        // this.forEachVisibleChild((elem: UIElement) => {
+
+        //     if (elem.frame.isVisible()) {
+        //         elem.measure(deltaTime);
+        //     }
+        // })
     }
     forEachVisibleChild(onEach: (elem: UIElement, index: number) => void) {
-        this.cElements.forEach((value: UIElement, ind: number) => {
-            if (value.frame.isVisible()) {
-                onEach(value, ind);
-            }
-        })
+        let elem = this.rootElement;
+        let index = this.rootIndex;
+        while (elem != null) {
+            onEach(elem, index);
+            elem = elem.next;
+            index++;
+        }
     }
 }
 export class UIStackChildContainer<ChildType extends UIElement> extends UIElement {
-    
+
     next: UIStackChildContainer<any> = null;
     last: UIStackChildContainer<any> = null;
     child: ChildType
-    parent: UIStackRecycler<any,ChildType>
-    get index(): number{
-        if(this.last != null){
+    parent: UIStackRecycler<any, ChildType>
+    get index(): number {
+        if (this.last != null) {
             return this.last.index + 1;
         }
         this.parent.rootIndex;
@@ -93,16 +184,27 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
         super(UIElement.createUID('uiStackChildContainer'), (thus) => {
             let ths: UIStackChildContainer<ChildType> = thus as any;
             if (parent.options.isVertical) {
-                let out = UIFrame.Build({ x: 0, y: ()=>{
-                    if(ths.last != null){
-                        return 0;//ths.last.frame.description.y
-                    }
-                    return 0;
-                }, width: ()=>ths.width, height: ()=>parent.options.childLength(ths.index) })
+                let out = UIFrame.Build({
+                    x: 0, y: () => {
+                        if (ths.last != null) {
+                            return 0;//ths.last.frame.description.y
+                        }
+                        return 0;
+                    }, width: () => ths.width, height: () => parent.options.childLength(ths.index)
+                })
                 out.visible
                 return out;
             } else {
-
+ let out = UIFrame.Build({
+                    x: () => {
+                        if (ths.last != null) {
+                            return 0;//ths.last.frame.description.y
+                        }
+                        return 0;
+                    }, y: 0, width: () => ths.width, height: () => parent.options.childLength(ths.index)
+                })
+                out.visible
+                return out;
             }
 
         }, brist);

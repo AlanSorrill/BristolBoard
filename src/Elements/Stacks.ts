@@ -1,5 +1,7 @@
-import { UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame } from '../BristolImports'
 
+import {LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
+let log = logger.local('UIStack');
+log.allowBelowLvl(LogLevel.naughty)
 export interface UIFrameDescription_StackChild {
     width: optFunc<number>
     height: optFunc<number>
@@ -15,7 +17,7 @@ export interface UIStackRecyclerSource<DataType> {
 }
 export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement {
     options: UIStackOptions<DataType, ChildType>
-    extraElements: UIStackChildContainer<ChildType>[] = [] 
+    extraElements: UIStackChildContainer<ChildType>
     rootElement: UIStackChildContainer<ChildType>
     rootIndex: number = 0
     rootOffset: number = 0;
@@ -43,7 +45,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         } else {
             this.source = UIStackRecycler.SourceFromArray(source);
         }
-        this.rootElement = new UIStackChildContainer(this, brist);
+        this.rootElement = new UIStackChildContainer(this);
         this.rootElement.parent = this;
         this.rootElement.onAddToParent();
         //childElement.frame.parent = this.frame;
@@ -51,12 +53,13 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         this.options.bindData(0, this.source.get(0), this.rootElement.child);
     }
     invalidateData() {
-        this.rootElement = new UIStackChildContainer(this, this.brist);
+        this.rootElement = new UIStackChildContainer(this);
         let count = this.source.count();
         for (let i = 0; i < count; i++) {
 
         }
     }
+
     private fixFrame(frame: UIFrameResult) {
         frame.centerX = (frame.left + frame.right) / 2
         frame.centerY = (frame.top + frame.bottom) / 2
@@ -94,8 +97,8 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
 
         } else {
             elem.frame.result = {
-                left: ths.rootOffset,
-                right: ths.rootOffset + ths.options.childLength(ths.rootIndex),
+                left: ths.frame.result.left + ths.rootOffset,
+                right: ths.frame.result.left + ths.rootOffset + ths.options.childLength(ths.rootIndex),
                 top: ths.frame.result.top,
                 bottom: ths.frame.result.bottom,
                 centerX: 0,
@@ -133,18 +136,23 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                 break;
             }
         }
-        if (elem != null) {
+        if (elem == null) {
+            elem = this.rootElement;
+        }
             if (this.options.isVertical) {
-                if (elem.frame.result.bottom < ths.frame.result.bottom) {
+                if (elem.frame.result.bottom < ths.frame.result.bottom && index < ths.source.count() - 1) {
                     //needs more elements
+                    elem.attachNext();
+                    this.measure(deltaTime);
                 } else if (elem.frame.result.top > ths.frame.result.bottom) {
                     //needs less elements
+                    elem.breakOff();
                 }
 
             } else {
 
             }
-        }
+        
 
         // this.forEachVisibleChild((elem: UIElement) => {
 
@@ -162,6 +170,28 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             index++;
         }
     }
+    addExtraElement(elem: UIStackChildContainer<ChildType>) {
+        if (this.extraElements == null) {
+            this.extraElements = elem;
+        } else {
+            let next = this.extraElements;
+            elem.next = next;
+            next.last = elem;
+            this.extraElements = elem;
+        }
+    }
+    getExtraElement(): UIStackChildContainer<ChildType> {
+        if (this.extraElements != null) {
+            let elem = this.extraElements;
+            this.extraElements = elem.next;
+            if (elem.next != null) {
+                elem.next.last = null;
+            }
+            elem.next = null;
+            return elem;
+        }
+        return new UIStackChildContainer(this);
+    }
 }
 export class UIStackChildContainer<ChildType extends UIElement> extends UIElement {
 
@@ -173,14 +203,14 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
         if (this.last != null) {
             return this.last.index + 1;
         }
-        this.parent.rootIndex;
+        return this.parent.rootIndex;
     }
     onDrawBackground(frame: UIFrameResult, deltaTime: number): void {
     }
     onDrawForeground(frame: UIFrameResult, deltaTime: number): void {
     }
     frame: UIFrame_CornerWidthHeight
-    constructor(parent: UIStackRecycler<any, ChildType>, brist: BristolBoard<any>) {
+    constructor(parent: UIStackRecycler<any, ChildType>) {
         super(UIElement.createUID('uiStackChildContainer'), (thus) => {
             let ths: UIStackChildContainer<ChildType> = thus as any;
             if (parent.options.isVertical) {
@@ -195,7 +225,7 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
                 out.visible
                 return out;
             } else {
- let out = UIFrame.Build({
+                let out = UIFrame.Build({
                     x: () => {
                         if (ths.last != null) {
                             return 0;//ths.last.frame.description.y
@@ -207,14 +237,61 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
                 return out;
             }
 
-        }, brist);
+        }, parent.brist);
+        this.parent = parent;
         let ths = this;
         this.child = parent.options.buildChild(UIFrame.Build({
             x: 0, y: 0, width: () => ths.width, height: () => ths.height
-        }), brist);
+        }), parent.brist);
         this.addChild(this.child);
     }
+    get isEndCap() {
+        return this.next == null;// && this.last != null;
+    }
+    get isStartCap() {
+        return this.last == null;// && this.next != null;
+    }
+    breakOff() {
+        if (this.isEndCap) {
+            log.info('Breaking off end cap')
+            //end cap
+            this.last.next = null;
+            this.last = null;
+        } else if (this.isStartCap) {
+            //start cap
+            log.info('Breaking off start cap')
+            this.parent.rootOffset += this.parent.options.childLength(this.parent.rootIndex);
+            this.parent.rootIndex++;
+            this.parent.rootElement = this.next;
+            this.next.last = null;
+            this.next = null;
+        }
+        this.parent.addExtraElement(this);
+    }
 
+    attachNext() {
+        let index = this.index;
+        if (this.isEndCap) {
+            
+            // if(index >= this.parent.source.count()){
+            //     return false;
+            // }
+            log.info(`Attaching to end cap ${index}`)
+            //end cap
+            this.next = this.parent.getExtraElement();
+            this.next.last = this;
+            this.parent.options.bindData(index, this.parent.source.get(index), this.next.child);
+            return true;
+        } else if (this.isStartCap) {
+            //start cap
+            log.info(`Attaching to start cap ${index}`)
+            this.parent.rootOffset += this.parent.options.childLength(this.parent.rootIndex);
+            this.parent.rootIndex++;
+            this.parent.rootElement = this.next;
+            this.next.last = null;
+            this.next = null;
+        }
+    }
 }
 export interface GridRecyclerAdapter<DataType, ChildType extends UIElement> {
     get rows(): number

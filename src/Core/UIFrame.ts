@@ -1,4 +1,4 @@
-import { optFunc, evalOptionalFunc } from './BristolImports'
+import { optFunc, evalOptionalFunc } from '../BristolImports'
 
 export interface UIFrameResult {
     left: number,

@@ -10,8 +10,8 @@ let fColor = new FColorDirectory();
 export { FColor, fColor, FColorSwath, FColorDirectory }
 
 
-export * from './UIElement'
-export * from './UIFrame'
+export * from './Core/UIElement'
+export * from './Core/UIFrame'
 export * from './FHTML'
 export * from './FColor'
 export * from './FGesture'

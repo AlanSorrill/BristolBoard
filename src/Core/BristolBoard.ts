@@ -67,10 +67,10 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
                 let currentElement: UIElement | (UIElement & MouseBtnListener)
-                ths.mouseBtnsPressed[evt.which] = false;
+              //  ths.mouseBtnsPressed[evt.which] = false;
                 for (let i = 0; i < overElements.length; i++) {
                     currentElement = overElements[i];
-                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                    if (UIElement.hasWheelListener(currentElement)) {
                         log.naughty(`Checking mouseWheel on ${overElements[i].id}`)
                         if (currentElement.mouseWheel(event)) {
                             break;

@@ -1,5 +1,5 @@
-import { BristolFontFamily, BristolHAlign, BristolVAlign, FColor } from '.';
-import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from './BristolImports'
+import { BristolFontFamily, BristolHAlign, BristolVAlign, FColor } from '..';
+import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
 
 
 export abstract class UIElement {
@@ -185,10 +185,10 @@ export abstract class UIElement {
             this.brist.line(this.frame.result.left, this.frame.result.bottom, this.frame.result.left, this.frame.result.top);
             this.brist.ellipse(this.frame.result.centerX, this.frame.result.centerY, weight * 2, weight * 2);
             // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
-            this.brist.fontFamily(BristolFontFamily.Roboto);
-            this.brist.textSize(12);
-            this.brist.textAlign(BristolHAlign.Left, BristolVAlign.Top);
-            this.brist.text(this.id, this.frame.result.left, this.frame.result.top)
+//             this.brist.fontFamily(BristolFontFamily.Roboto);
+//             this.brist.textSize(12);
+//             this.brist.textAlign(BristolHAlign.Left, BristolVAlign.Top);
+//             this.brist.text(this.id, this.frame.result.left, this.frame.result.top)
             if (drawChildFrames) {
                 this.forEachVisibleChild((elem: UIElement) => {
                     elem.drawUIFrame(true, weight);
@@ -255,6 +255,9 @@ export abstract class UIElement {
     static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
         return IsType<MouseDragListener>(target, 'mouseDragged')
     }
+    static hasWheelListener(target: UIElement): target is(UIElement & MouseWheelListener){
+        return IsType<MouseWheelListener>(target, 'mouseWheel');
+    }
     static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {
         return IsType<KeyListener>(target, 'keyReleased')
     }
@@ -279,8 +282,10 @@ export interface KeyListener {
     keyPressed(evt: KeyboardInputEvent): boolean
     keyReleased(evt: KeyboardInputEvent): boolean
 }
-export interface MouseBtnListener {
+export interface MouseWheelListener {
     mouseWheel(delta: MouseScrolledInputEvent): boolean
+}
+export interface MouseBtnListener {
     mousePressed(evt: MouseBtnInputEvent): boolean
     mouseReleased(evt: MouseBtnInputEvent): boolean
 }

@@ -1,27 +1,40 @@
 
-import {LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
+import { MouseWheelListener } from '..';
+import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
+import { MouseScrolledInputEvent } from '../Core/BristolInput';
 let log = logger.local('UIStack');
 log.allowBelowLvl(LogLevel.naughty)
 export interface UIFrameDescription_StackChild {
     width: optFunc<number>
     height: optFunc<number>
 }
+export enum OverScrollBehavior {
+    hard, soft
+}
 export interface UIStackOptions<DataType, ChildType extends UIElement> {
     childLength: (index: number) => number;
     buildChild: (frame: UIFrame, brist: BristolBoard<any>) => ChildType
     bindData: (index: number, data: DataType, child: ChildType) => void
     isVertical: boolean
+    overscroll?: OverScrollBehavior
 }
 export interface UIStackRecyclerSource<DataType> {
     count: () => number; get: (index: number) => DataType;
 }
-export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement {
+export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement implements MouseWheelListener, MouseDragListener {
     options: UIStackOptions<DataType, ChildType>
-    extraElements: UIStackChildContainer<ChildType>
-    rootElement: UIStackChildContainer<ChildType>
+    extraElements: UIStackChildContainer<DataType, ChildType>
+    rootElement: UIStackChildContainer<DataType, ChildType>
     rootIndex: number = 0
     rootOffset: number = 0;
     source: UIStackRecyclerSource<DataType>;
+    get endCap() {
+        let elem = this.rootElement;
+        while (elem.next != null) {
+            elem = elem.next;
+        }
+        return elem;
+    }
     static SourceFromArray<DataType>(data: DataType[]) {
         return {
             count: () => data.length,
@@ -52,11 +65,63 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         //childElement.onAddToParent();
         this.options.bindData(0, this.source.get(0), this.rootElement.child);
     }
+    get overscrollBehavior(): OverScrollBehavior {
+        if (typeof this.options.overscroll == 'undefined') {
+            return OverScrollBehavior.hard
+        }
+        return this.options.overscroll;
+    }
+    shouldDragLock(event: MouseBtnInputEvent): boolean {
+        return true;
+    }
+    mouseDragged(evt: MouseDraggedInputEvent): boolean {
+        if (this.options.isVertical) {
+            this.addScroll(evt.deltaY);
+        } else {
+            this.addScroll(evt.deltaX);
+        }
+        return true;
+    }
+    mousePinched(evt: MousePinchedInputEvent): boolean {
+        return false;
+    }
+    onDragEnd(event: MouseBtnInputEvent): boolean {
+        return true;
+    }
+    mouseWheel(event: MouseScrolledInputEvent): boolean {
+        this.addScroll(event.amount);
+
+        return true;
+    }
     invalidateData() {
         this.rootElement = new UIStackChildContainer(this);
         let count = this.source.count();
         for (let i = 0; i < count; i++) {
 
+        }
+    }
+    addScroll(amount: number) {
+        this.rootOffset += amount;
+        let endCap = this.endCap;
+        if (this.rootIndex == 0 && this.rootOffset > 0) {
+            switch (this.overscrollBehavior) {
+                default:
+                    log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)
+                case OverScrollBehavior.hard:
+                    this.rootOffset = 0;
+
+            }
+        } else if (endCap.frame.result.bottom < this.frame.result.bottom && endCap.index == this.source.count() - 1) {
+            switch (this.overscrollBehavior) {
+                default:
+                    log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)
+                case OverScrollBehavior.hard:
+                    if(this.options.isVertical){
+                    this.rootOffset += this.frame.result.bottom - endCap.frame.result.bottom;
+                }else{
+                    this.rootOffset += this.frame.result.right - endCap.frame.result.right;
+                }
+            }
         }
     }
 
@@ -125,7 +190,18 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                     height: 0
                 };
 
-            } else { }
+            } else {
+                elem.frame.result = {
+                    left: elem.last.frame.result.right,
+                    right: elem.last.frame.result.right + ths.options.childLength(index),
+                    top: ths.frame.result.top,
+                    bottom: ths.frame.result.bottom,
+                    centerX: 0,
+                    centerY: 0,
+                    width: 0,
+                    height: 0
+                };
+            }
             elem.frame.result = this.fixFrame(elem.frame.result);
             elem.child.frame.parent = elem.frame;
             elem.child.measure(deltaTime);
@@ -139,20 +215,45 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         if (elem == null) {
             elem = this.rootElement;
         }
-            if (this.options.isVertical) {
-                if (elem.frame.result.bottom < ths.frame.result.bottom && index < ths.source.count() - 1) {
-                    //needs more elements
-                    elem.attachNext();
-                    this.measure(deltaTime);
-                } else if (elem.frame.result.top > ths.frame.result.bottom) {
-                    //needs less elements
-                    elem.breakOff();
-                }
-
-            } else {
-
+        if (this.options.isVertical) {
+            if (this.rootElement.frame.result.top > ths.frame.result.top && this.rootElement.index > 0) {
+                this.rootElement.attachNext();
+                this.measure(deltaTime);
+                return;
+            } else if (this.rootElement.frame.result.bottom < ths.frame.result.top) {
+                this.rootElement.breakOff();
+                return;
             }
-        
+
+            if (elem.frame.result.bottom < ths.frame.result.bottom && index < ths.source.count() - 1) {
+                //needs more elements
+                elem.attachNext();
+                this.measure(deltaTime);
+            } else if (elem.frame.result.top > ths.frame.result.bottom) {
+                //needs less elements
+                elem.breakOff();
+            }
+
+        } else {
+            if (this.rootElement.frame.result.left > ths.frame.result.left && this.rootElement.index > 0) {
+                this.rootElement.attachNext();
+                this.measure(deltaTime);
+                return;
+            } else if (this.rootElement.frame.result.right < ths.frame.result.left) {
+                this.rootElement.breakOff();
+                return;
+            }
+
+            if (elem.frame.result.right < ths.frame.result.right && index < ths.source.count() - 1) {
+                //needs more elements
+                elem.attachNext();
+                this.measure(deltaTime);
+            } else if (elem.frame.result.left > ths.frame.result.right) {
+                //needs less elements
+                elem.breakOff();
+            }
+        }
+
 
         // this.forEachVisibleChild((elem: UIElement) => {
 
@@ -170,7 +271,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             index++;
         }
     }
-    addExtraElement(elem: UIStackChildContainer<ChildType>) {
+    addExtraElement(elem: UIStackChildContainer<DataType, ChildType>) {
         if (this.extraElements == null) {
             this.extraElements = elem;
         } else {
@@ -180,7 +281,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             this.extraElements = elem;
         }
     }
-    getExtraElement(): UIStackChildContainer<ChildType> {
+    getExtraElement(): UIStackChildContainer<DataType, ChildType> {
         if (this.extraElements != null) {
             let elem = this.extraElements;
             this.extraElements = elem.next;
@@ -193,12 +294,12 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         return new UIStackChildContainer(this);
     }
 }
-export class UIStackChildContainer<ChildType extends UIElement> extends UIElement {
+export class UIStackChildContainer<DataType, ChildType extends UIElement> extends UIElement {
 
-    next: UIStackChildContainer<any> = null;
-    last: UIStackChildContainer<any> = null;
+    next: UIStackChildContainer<DataType, ChildType> = null;
+    last: UIStackChildContainer<DataType, ChildType> = null;
     child: ChildType
-    parent: UIStackRecycler<any, ChildType>
+    parent: UIStackRecycler<DataType, ChildType>
     get index(): number {
         if (this.last != null) {
             return this.last.index + 1;
@@ -212,7 +313,7 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
     frame: UIFrame_CornerWidthHeight
     constructor(parent: UIStackRecycler<any, ChildType>) {
         super(UIElement.createUID('uiStackChildContainer'), (thus) => {
-            let ths: UIStackChildContainer<ChildType> = thus as any;
+            let ths: UIStackChildContainer<DataType, ChildType> = thus as any;
             if (parent.options.isVertical) {
                 let out = UIFrame.Build({
                     x: 0, y: () => {
@@ -252,6 +353,10 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
         return this.last == null;// && this.next != null;
     }
     breakOff() {
+        if (this.next == null && this.last == null) {
+            log.error('cannot break off root')
+            return;
+        }
         if (this.isEndCap) {
             log.info('Breaking off end cap')
             //end cap
@@ -272,7 +377,7 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
     attachNext() {
         let index = this.index;
         if (this.isEndCap) {
-            
+
             // if(index >= this.parent.source.count()){
             //     return false;
             // }
@@ -280,16 +385,17 @@ export class UIStackChildContainer<ChildType extends UIElement> extends UIElemen
             //end cap
             this.next = this.parent.getExtraElement();
             this.next.last = this;
-            this.parent.options.bindData(index, this.parent.source.get(index), this.next.child);
+            this.parent.options.bindData(index + 1, this.parent.source.get(index + 1), this.next.child);
             return true;
         } else if (this.isStartCap) {
             //start cap
             log.info(`Attaching to start cap ${index}`)
-            this.parent.rootOffset += this.parent.options.childLength(this.parent.rootIndex);
-            this.parent.rootIndex++;
-            this.parent.rootElement = this.next;
-            this.next.last = null;
-            this.next = null;
+            this.parent.rootIndex--;
+            this.parent.rootOffset -= this.parent.options.childLength(this.parent.rootIndex);
+            this.last = this.parent.getExtraElement();
+            this.parent.options.bindData(this.parent.rootIndex, this.parent.source.get(this.parent.rootIndex), this.last.child);
+            this.last.next = this;
+            this.parent.rootElement = this.last;
         }
     }
 }

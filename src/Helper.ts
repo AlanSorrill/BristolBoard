@@ -14,6 +14,7 @@ declare global {
         get last(): T
         removeInPlace(shouldKeep: (value: T, index: number) => boolean): number
         toMap(indexKey: keyof T): Map<string, T>
+        toSubArrays(subArrayLength: number): Array<T>[]
     }
 
 
@@ -32,6 +33,20 @@ Map.prototype.toArray = function <K, V>() {
     })
     return out;
 }
+Array.prototype.toSubArrays = function <T>(subArrayLength: number): Array<T>[] {
+    let out: Array<T>[] = [];
+    let current: Array<T> = [];
+    for(let i = 0;i<this.length;i++){
+        if(current.length < subArrayLength){
+            current.push(this[i]);
+        } else {
+            out.push(current);
+            current = [];
+        }
+    }
+    return out;
+}
+
 Array.prototype.toMap = function <T>(indexKey: keyof T) {
     let out = new Map<string, T>();
     let current;

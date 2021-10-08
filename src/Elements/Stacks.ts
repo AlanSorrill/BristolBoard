@@ -21,6 +21,18 @@ export interface UIStackOptions<DataType, ChildType extends UIElement> {
 export interface UIStackRecyclerSource<DataType> {
     count: () => number; get: (index: number) => DataType;
 }
+export class ArraySource<DataType> implements UIStackRecyclerSource<DataType>{
+    data: DataType[];
+    constructor(data: DataType[]) {
+        this.data = data;
+    }
+    count() {
+        return this.data.length;
+    }
+    get(index: number) {
+        return this.data[index];
+    }
+}
 export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIElement implements MouseWheelListener, MouseDragListener {
     options: UIStackOptions<DataType, ChildType>
     extraElements: UIStackChildContainer<DataType, ChildType>
@@ -41,8 +53,46 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             get: (index: number) => data[index]
         }
     }
-    static GridFixedColumns(cols: number){
-        
+    static GridFixedColumns<DataType, ViewType extends UIElement>(data: DataType[], options: {
+        buildCell: (frame: UIFrame, brist: BristolBoard<any>) => ViewType,
+        rowHeight?: (row: number) => number,
+        columnWidth?: (col: number) => number
+        bindData: (index: number, data: DataType, child: ViewType) => void
+        cols: number,
+    },
+        frame: UIFrame, brist: BristolBoard<any>): (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) {
+        type RowView = UIStackRecycler<DataType, ViewType>;
+        let rowCount = () => {
+            return Math.ceil(data.length / options.cols)
+        }
+        if (typeof options.columnWidth == 'undefined') {
+            options.columnWidth = (col: number) => (frame.result.width / options.cols)
+        }
+        if (typeof options.rowHeight == 'undefined') {
+            options.rowHeight = (row: number) => (frame.result.height / rowCount());
+        }
+        let out: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = new UIStackRecycler<DataType[], RowView>(UIStackRecycler.SourceFromArray(data.toSubArrays(options.cols)), {
+            isVertical: true,
+            overscroll: OverScrollBehavior.hard,
+            childLength: (index: number) => { return options.rowHeight(Math.floor(index / options.cols)); },
+            bindData: (index: number, data: DataType[], child: RowView) => {
+                let d = child.source as ArraySource<DataType>;
+                d.data = data;
+
+            },
+            buildChild: (frame: UIFrame, brist: BristolBoard<any>) => {
+                let rowView: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = new UIStackRecycler<DataType, ViewType>(new ArraySource([]), {
+                    'bindData': options.bindData,
+                    'buildChild': options.buildCell,
+                    childLength: (index: number) => options.columnWidth(index % options.cols),
+                    isVertical: false,
+
+                }, frame, brist) as any;
+                rowView.data = [];
+                return rowView;
+            }
+        }, frame, brist) as any;
+        return out;
     }
     onDrawBackground(frame: UIFrameResult, deltaTime: number): void {
         this.brist.ctx.save();
@@ -67,6 +117,19 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         //childElement.frame.parent = this.frame;
         //childElement.onAddToParent();
         this.options.bindData(0, this.source.get(0), this.rootElement.child);
+    }
+    refeshData() {
+        if (this.rootIndex >= this.source.count()) {
+            this.rootIndex = 0;
+            this.rootOffset = 0;
+
+        }
+        this.rootElement = new UIStackChildContainer(this);
+        this.rootElement.parent = this;
+        this.rootElement.onAddToParent();
+        //childElement.frame.parent = this.frame;
+        //childElement.onAddToParent();
+        this.options.bindData(this.rootIndex, this.source.get(0), this.rootElement.child);
     }
     get overscrollBehavior(): OverScrollBehavior {
         if (typeof this.options.overscroll == 'undefined') {
@@ -119,11 +182,11 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                 default:
                     log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)
                 case OverScrollBehavior.hard:
-                    if(this.options.isVertical){
-                    this.rootOffset += this.frame.result.bottom - endCap.frame.result.bottom;
-                }else{
-                    this.rootOffset += this.frame.result.right - endCap.frame.result.right;
-                }
+                    if (this.options.isVertical) {
+                        this.rootOffset += this.frame.result.bottom - endCap.frame.result.bottom;
+                    } else {
+                        this.rootOffset += this.frame.result.right - endCap.frame.result.right;
+                    }
             }
         }
     }

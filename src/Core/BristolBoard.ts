@@ -29,9 +29,9 @@ export class BristolBoard<RootElementType extends UIElement> {
     dragLockElement: (UIElement & MouseDragListener) = null;
     mouseOverElement: (UIElement & MouseMovementListener) = null;
     debuggerFlags: {
-        uiFrameOutlines: boolean
+        debugUIFrame: boolean
     } = {
-            uiFrameOutlines: false
+            debugUIFrame: false
         }
 
 
@@ -784,7 +784,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.rootElement?.measure(deltaMs);
         this.rootElement?.draw(deltaMs);
 
-        if (this.debuggerFlags.uiFrameOutlines && this.rootElement != null) {
+        if (this.debuggerFlags.debugUIFrame && this.rootElement != null) {
             this.rootElement.drawUIFrame(true, 1);
             let debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last
             if (debugElem != null) {

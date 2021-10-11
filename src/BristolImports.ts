@@ -20,5 +20,5 @@ export * from './Elements/BristolButton'
 export * from './Elements/Stacks'
 export * from './Core/BristolBoard'
 
-export * from './Core/BristolEnums'
-export * from './Core/BristolInput'
+export * from './BristolEnums'
+export * from './BristolInput'

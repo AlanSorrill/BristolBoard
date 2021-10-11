@@ -11,13 +11,13 @@ export interface UIFrameResult {
     centerY: number
 }
 export abstract class UIFrame {
+    result: UIFrameResult = null;
     visible: optFunc<boolean> = true;
     parent: UIFrame;
     isVisible(): boolean {
         return evalOptionalFunc(this.visible)
     }
 
-    result: UIFrameResult = null;
     abstract leftX(): number
 
 
@@ -31,7 +31,7 @@ export abstract class UIFrame {
     abstract bottomY(): number
 
 
-    abstract isInside(x: number, y: number): boolean
+    abstract containsPoint(x: number, y: number): boolean
     centerX(): number {
         return (this.leftX() + this.rightX()) / 2
     }
@@ -69,7 +69,7 @@ export abstract class UIFrame {
         }
     }
     getCornerY(corner: UICorner, useResult = false) {
-        if(useResult && this.result != null){
+        if (useResult && this.result != null) {
             switch (corner) {
                 case UICorner.upLeft:
                     return this.result.top;
@@ -102,15 +102,17 @@ export abstract class UIFrame {
     measureHeight(): number {
         return this.bottomY() - this.topY();
     }
-    public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame, parent: UIFrame = null) {
+    public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame | UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
         if (description instanceof UIFrame) {
             //pass through to allow for custom UIFrame construction
             return description;
         }
         if (typeof description['width'] != 'undefined') {
             return new UIFrame_CornerWidthHeight(description as any as UIFrameDescription_CornerWidthHeight, parent);
-        } else if (typeof description['radius'] != 'undefined') {
-            return new UIFrame_CenterRadius(description as any as UIFrameDescription_CenterRadius, parent)
+        }
+        else if (typeof description['radius'] != 'undefined') {
+            throw new Error(`Not yet supported`);
+            // return new UIFrame_CenterRadius(description as any as UIFrameDescription_CenterRadius, parent)
         }
     }
 }
@@ -119,7 +121,15 @@ export enum UICorner {
 }
 export class UIFrame_CornerWidthHeight extends UIFrame {
     description: UIFrameDescription_CornerWidthHeight;
-    isInside(x: number, y: number): boolean {
+    
+    constructor(description: UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
+        super();
+        this.description = description;
+        this.parent = parent;
+    }
+
+
+    containsPoint(x: number, y: number): boolean {
         if (this.result != null) {
             return (x >= this.result.left && x <= this.result.right) && (y >= this.result.top && y <= this.result.bottom)
         }
@@ -209,47 +219,40 @@ export class UIFrame_CornerWidthHeight extends UIFrame {
     }
 
     get x(): number {
-        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.x) : (this.hasParent ? evalOptionalFunc(this.description.x) + this.parent.getCornerX(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft),true) : evalOptionalFunc(this.description.x));
+        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.x) : (this.hasParent ? evalOptionalFunc(this.description.x) + this.parent.getCornerX(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft), true) : evalOptionalFunc(this.description.x));
     }
     get y(): number {
-        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.y) : (this.hasParent ? evalOptionalFunc(this.description.y) + this.parent.getCornerY(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft),true) : evalOptionalFunc(this.description.y));
-    }
-    constructor(description: UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
-        super();
-        this.description = description;
-        this.parent = parent;
-        let ths = this;
-        // this.absX = () => (ths.hasParent ? evalOptionalFunc(ths.relX) + ths.parent.getCornerX(evalOptionalFunc(ths.parentCorner)) : evalOptionalFunc(ths.relX));
-        // this.absY = () => (ths.hasParent ? evalOptionalFunc(ths.relY) + ths.parent.getCornerY(evalOptionalFunc(ths.parentCorner)) : evalOptionalFunc(ths.relY));
-    }
-}
-export class UIFrame_CenterRadius extends UIFrame {
-    description: UIFrameDescription_CenterRadius;
-    constructor(description: UIFrameDescription_CenterRadius, parent: UIFrame = null) {
-        super();
-        this.description = description;
-        this.parent = parent;
-        let ths = this;
-
-    }
-    leftX(): number {
-        return evalOptionalFunc(this.description?.x, 0) - evalOptionalFunc(this.description?.radius, 0);
-    }
-    rightX(): number {
-        return evalOptionalFunc(this.description?.x, 0) + evalOptionalFunc(this.description?.radius, 0);
-    }
-    topY(): number {
-        return evalOptionalFunc(this.description?.y, 0) - evalOptionalFunc(this.description?.radius, 0);
-    }
-    bottomY(): number {
-        return evalOptionalFunc(this.description?.y, 0) + evalOptionalFunc(this.description?.radius, 0);
-    }
-    isInside(x: number, y: number): boolean {
-        let center: [number, number] = [evalOptionalFunc(this.description?.x, 0), evalOptionalFunc(this.description?.y, 0)]
-        return Math.sqrt(Math.pow(x - center[0], 2) + Math.pow(y - center[1], 2)) < evalOptionalFunc(this.description?.radius, 1);
+        return (evalOptionalFunc(this.description.coordType, CoordType.Relative) == CoordType.Absolute) ? evalOptionalFunc(this.description.y) : (this.hasParent ? evalOptionalFunc(this.description.y) + this.parent.getCornerY(evalOptionalFunc(this.description.parentCorner, UICorner.upLeft), true) : evalOptionalFunc(this.description.y));
     }
 
 }
+// export class UIFrame_CenterRadius extends UIFrame {
+//     description: UIFrameDescription_CenterRadius;
+//     constructor(description: UIFrameDescription_CenterRadius, parent: UIFrame = null) {
+//         super();
+//         this.description = description;
+//         this.parent = parent;
+//         let ths = this;
+
+//     }
+//     leftX(): number {
+//         return evalOptionalFunc(this.description?.x, 0) - evalOptionalFunc(this.description?.radius, 0);
+//     }
+//     rightX(): number {
+//         return evalOptionalFunc(this.description?.x, 0) + evalOptionalFunc(this.description?.radius, 0);
+//     }
+//     topY(): number {
+//         return evalOptionalFunc(this.description?.y, 0) - evalOptionalFunc(this.description?.radius, 0);
+//     }
+//     bottomY(): number {
+//         return evalOptionalFunc(this.description?.y, 0) + evalOptionalFunc(this.description?.radius, 0);
+//     }
+//     isInside(x: number, y: number): boolean {
+//         let center: [number, number] = [evalOptionalFunc(this.description?.x, 0), evalOptionalFunc(this.description?.y, 0)]
+//         return Math.sqrt(Math.pow(x - center[0], 2) + Math.pow(y - center[1], 2)) < evalOptionalFunc(this.description?.radius, 1);
+//     }
+
+// }
 export enum CoordType {
     Relative, Absolute
 }
@@ -264,6 +267,6 @@ export interface UIFrameDescription_CornerWidthHeight extends UIFrameDescription
     measureCorner?: optFunc<UICorner>// = UICorner.upLeft,
     parentCorner?: optFunc<UICorner>// = UICorner.upLeft,
 }
-export interface UIFrameDescription_CenterRadius extends UIFrameDescription {
-    radius: optFunc<number>
-}
+// export interface UIFrameDescription_CenterRadius extends UIFrameDescription {
+//     radius: optFunc<number>
+// }

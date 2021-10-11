@@ -32,8 +32,8 @@ export class FHTML<TYPE extends HTMLElement> {
 
 
     }
-    append(canvas: FHTML<any>) {
-        this.element.append(canvas.element);
+    append(element: FHTML<any>) {
+        this.element.append(element.element);
     }
     getCss(name: string): string {
         return this.element.style[name];

@@ -1,7 +1,7 @@
 
 import { MouseWheelListener } from '..';
 import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
-import { MouseScrolledInputEvent } from '../Core/BristolInput';
+import { MouseScrolledInputEvent } from '../BristolInput';
 let log = logger.local('UIStack');
 log.allowBelowLvl(LogLevel.naughty)
 export interface UIFrameDescription_StackChild {

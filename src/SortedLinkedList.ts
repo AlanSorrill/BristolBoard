@@ -5,32 +5,11 @@ export class SortedLinkedList<T> {
         return this.count;
     }
     private count: number = 0;
-    clear(onRemove: (value: T) => void = (v: T) => { }) {
-        let tmp = this.head;
-        this.head = null;
-        let next: SortedLinkedListNode<T>;
-        while (tmp != null) {
-            next = tmp.next;
-            onRemove(tmp.value);
-            tmp.next = null;
-            tmp.last = null;
-            tmp.value = null;
-            tmp = next;
-        }
-    }
+
 
     comparator: (a: T, b: T) => number;
     head: SortedLinkedListNode<T> = null;
-    get tail(): SortedLinkedListNode<T> {
-        let n = this.head;
-        if (n == null) {
-            return null;
-        }
-        while (n.next != null) {
-            n = n.next;
-        }
-        return n;
-    }
+
     public static Create<T>(comparator: (a: T, b: T) => number) {
         let out = new SortedLinkedList<T>(comparator);
         return new Proxy(out, {
@@ -38,7 +17,7 @@ export class SortedLinkedList<T> {
                 if (name in target) {
                     return target[name]
                 };
-                if (isNumber(name as any)) {
+                if (isNumber(name as any)) {//get items by index, for example: let x = myList[2];
                     let targetIndex = Number(name);
                     let out: T = null;
                     target.forEach((v: T, index: number) => {
@@ -53,19 +32,7 @@ export class SortedLinkedList<T> {
             }
         })
     }
-    private constructor(comparator: (a: T, b: T) => number) {
-        this.comparator = comparator;
-    }
 
-    isAGreater(a: T, b: T) {
-        return this.comparator(a, b) > 0;
-    }
-    isALesser(a: T, b: T) {
-        return this.comparator(a, b) < 0;
-    }
-    isEqual(a: T, b: T) {
-        return this.comparator(a, b) == 0;
-    }
     add(value: T) {
         this.count++;
         if (this.head == null) {
@@ -97,14 +64,13 @@ export class SortedLinkedList<T> {
         }
         return i;
     }
-
     //removes first element that condition(T) returns true for
     remove(condition: ((v: T) => boolean)) {
         if (condition(this.head.value)) {
             this.head = this.head.next;
-            if(this.head != null){
-            this.head.last = null;
-            this.count--;
+            if (this.head != null) {
+                this.head.last = null;
+                this.count--;
             } else {
                 this.count = 0;
             }
@@ -124,6 +90,20 @@ export class SortedLinkedList<T> {
             lastN = n;
             n = n.next;
         }
+    }
+    clear(onRemove: (value: T) => void = (v: T) => { }) {
+        let tmp = this.head;
+        this.head = null;
+        let next: SortedLinkedListNode<T>;
+        while (tmp != null) {
+            next = tmp.next;
+            onRemove(tmp.value);
+            tmp.next = null;
+            tmp.last = null;
+            tmp.value = null;
+            tmp = next;
+        }
+        this.count = 0;
     }
     find(condition: (elem: T) => boolean): T {
         let n = this.head;
@@ -159,7 +139,36 @@ export class SortedLinkedList<T> {
         }
     }
 
+
+
+    private constructor(comparator: (a: T, b: T) => number) {
+        this.comparator = comparator;
+    }
+
+    get tail(): SortedLinkedListNode<T> {
+        let n = this.head;
+        if (n == null) {
+            return null;
+        }
+        while (n.next != null) {
+            n = n.next;
+        }
+        return n;
+    }
+
+    isAGreater(a: T, b: T) {
+        return this.comparator(a, b) > 0;
+    }
+
+    isALesser(a: T, b: T) {
+        return this.comparator(a, b) < 0;
+    }
+
+    isEqual(a: T, b: T) {
+        return this.comparator(a, b) == 0;
+    }
 }
+
 export class SortedLinkedListNode<T> {
     value: T
     next: SortedLinkedListNode<T>

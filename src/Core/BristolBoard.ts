@@ -22,6 +22,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     deviceType: DeviceType;
     orientation: DeviceOrientation
     gesture: FGesture;
+    fullscreenOnTouch: boolean = true;
     isKeyPressed(key: KeyboardInputKey): boolean {
         return this.keyboardState.get(key) || false;
     }
@@ -67,7 +68,7 @@ export class BristolBoard<RootElementType extends UIElement> {
                 let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
                 let currentElement: UIElement | (UIElement & MouseBtnListener)
-              //  ths.mouseBtnsPressed[evt.which] = false;
+                //  ths.mouseBtnsPressed[evt.which] = false;
                 for (let i = 0; i < overElements.length; i++) {
                     currentElement = overElements[i];
                     if (UIElement.hasWheelListener(currentElement)) {
@@ -276,9 +277,10 @@ export class BristolBoard<RootElementType extends UIElement> {
         })
         this.gesture = new FGesture(this.canvas, {
             onTouchStart: (pos: Coordinate) => {
-                //                 if (this.isFullscreen == false) {
-                //                     this.fullscreen();
-                //                 }
+                if (this.isFullscreen == false && ths.deviceType != DeviceType.Desktop && this.fullscreenOnTouch) {
+                    this.fullscreen();
+                }
+
                 pos.x = pos.x * ths.resolutionScale;
                 pos.y = pos.y * ths.resolutionScale;
                 let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
@@ -819,11 +821,11 @@ export class BristolBoard<RootElementType extends UIElement> {
         if (this.debuggerFlags.uiFrameOutlines && this.rootElement != null) {
             this.rootElement.drawUIFrame(true, 1);
             let debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last
-            if(debugElem != null){
-            this.fillColor(debugElem.debugFrameColor);
-            this.textAlign(BristolHAlign.Left, BristolVAlign.Bottom);
-            this.textSize(12);
-            this.ctx.fillText(debugElem?.id, this.mouseX, this.mouseY)
+            if (debugElem != null) {
+                this.fillColor(debugElem.debugFrameColor);
+                this.textAlign(BristolHAlign.Left, BristolVAlign.Bottom);
+                this.textSize(12);
+                this.ctx.fillText(debugElem?.id, this.mouseX, this.mouseY)
             }
         }
 

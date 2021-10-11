@@ -167,8 +167,12 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         }
     }
     addScroll(amount: number) {
-        this.rootOffset += amount;
         let endCap = this.endCap;
+        let bodyHeight = endCap.bottom; - (this.top - this.rootOffset)
+        if(bodyHeight < this.height){
+return;
+        }
+        this.rootOffset += amount;
         if (this.rootIndex == 0 && this.rootOffset > 0) {
             switch (this.overscrollBehavior) {
                 default:

@@ -1,9 +1,8 @@
 
 import {
     BristolFontStyle, BristolFontWeight, BristolFontFamily, BristolHAlign, BristolVAlign, LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML,
-    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, KeyboardInputKey, MouseBtnInputEvent, MouseDraggedInputEvent, MouseMovedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent
+    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, KeyboardInputKey, MouseBtnInputEvent, MouseDraggedInputEvent,  MousePinchedInputEvent, MouseScrolledInputEvent
 } from "../BristolImports";
-
 
 let log = logger.local('BristolBoard');
 log.allowBelowLvl(LogLevel.debug);
@@ -16,7 +15,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     canvasElem: HTMLCanvasElement = null;
     containerDivElem: HTMLDivElement;
     ctx: CanvasRenderingContext2D;
-    mouseBtnsPressed: [boolean, boolean, boolean] = [false, false, false]
+    mouseBtnsPressed: boolean = false;//[boolean, boolean, boolean] = [false, false, false]
     // jobExecutor: JobExecutor = null;
     keyboardState: Map<string, boolean> = new Map()
     deviceType: DeviceType;
@@ -44,6 +43,212 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.canvas = new FHTML(document.createElement('canvas'));
         this.canvas.attr('oncontextmenu', 'return false');
         this.containerDiv.append(this.canvas);
+
+        var mc = new Hammer.Manager(this.canvas.element);
+
+        // create a pinch and rotate recognizer
+        // these require 2 pointers
+
+        let pinch = new Hammer.Pinch();
+        let pan = new Hammer.Pan();
+        let press = new Hammer.Press();
+        let singleTap = new Hammer.Tap();
+        let doubleTap = new Hammer.Tap({ event: 'doubletap', taps: 2 });
+
+        // we want to detect both the same time
+        pinch.recognizeWith(pan);
+        singleTap.recognizeWith(doubleTap)
+        // add to the Manager
+        mc.add([pinch, pan, doubleTap, singleTap, press]);
+
+
+        //         mc.on("pinch rotate tap doubletap", function (ev) {
+        //            if(ev.type != "rotate")
+        //             console.log(ev);
+        //         });
+        mc.on('pinch', (evt: HammerInput) => {
+            if (evt['additionalEvent'] == 'pinchin') {
+                evt.scale = 1 / evt.scale;
+            }
+            console.log(`Pinch ${evt.distance} x ${evt.scale}`, evt)
+        })
+        let lastDelta = {x: 0, y: 0}
+        mc.on('pan', (evt: HammerInput) => {
+            var parentOffset = ths.canvas.offset();
+
+
+            //or $(this).offset(); if you really just want the current element's offset
+            var relX = (evt.center.x - parentOffset.left)// * ths.resolutionScale;
+            var relY = (evt.center.y - parentOffset.top)// * ths.resolutionScale;
+            let deltaX = (evt.deltaX - lastDelta.x) / ths.resolutionScale;
+            let deltaY = (evt.deltaY - lastDelta.y) / ths.resolutionScale;
+            lastDelta.x = evt.deltaX;
+            lastDelta.y = evt.deltaY;
+            console.log(`pan2 ${deltaY}`, evt)
+
+            // ths.iMouseX = relX;
+            // ths.iMouseY = relY;
+
+            let dragEvent = new MouseDraggedInputEvent(relX, relY, deltaX, deltaY);
+            if (ths.dragLockElement != null) {
+                ths.dragLockElement.mouseDragged(dragEvent);
+                if(evt.isFinal){
+                    ths.dragLockElement.onDragEnd(dragEvent);
+                    ths.dragLockElement = null;
+                }
+                return;
+            } else {
+             let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+               let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+
+                for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseDragListener(currentElement)) {
+                        if (currentElement.shouldDragLock(dragEvent)) {
+                            lastDelta.x = 0;
+                            lastDelta.y = 0;
+                            ths.dragLockElement = currentElement
+                            break;
+                        }
+                    }
+                   
+
+                }
+            }
+
+
+          
+        })
+        mc.on('tap', (evt: HammerInput) => {
+            console.log(`tap ${evt.distance}`, evt)
+
+        })
+        mc.on('doubletap', (evt: HammerInput) => {
+            console.log(`doubletap ${evt.distance}`, evt)
+
+        })
+        mc.on('press', (evt: HammerInput) => {
+            console.log(`PRESSED- ${evt.distance}`, evt)
+            if (this.isFullscreen == false) {
+                // this.fullscreen();
+            }
+            var parentOffset = ths.canvas.offset();
+
+            var relX = (evt.center.x - parentOffset.left) * ths.resolutionScale;
+            var relY = (evt.center.y - parentOffset.top) * ths.resolutionScale;
+            let deltaX = evt.deltaX * ths.resolutionScale;
+            let deltaY = evt.deltaY * ths.resolutionScale;
+
+            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
+                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
+
+                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                let event = new MouseBtnInputEvent(relX, relY,  InputEventAction.Down);
+                ths.mouseBtnsPressed = true;//[evt.which] = true;
+
+                let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+
+                for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseDragListener(currentElement)) {
+                        if (currentElement.shouldDragLock(event)) {
+                            lastDelta.x = 0;
+                            lastDelta.y = 0;
+                            ths.dragLockElement = currentElement
+                        }
+                    }
+                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                        log.naughty(`Checking mousePressed on ${currentElement.id}`)
+                        if (currentElement.mousePressed(event)) {
+                            break;
+                        }
+                    }
+
+                }
+                evt.preventDefault();
+
+            }
+
+        })
+        mc.on('pressup', (evt: HammerInput) => {
+            console.log(`RELEASED- ${evt.distance}`, evt)
+            var parentOffset = ths.canvas.offset();
+            var relX = (evt.center.x - parentOffset.left) * ths.resolutionScale;
+            var relY = (evt.center.y - parentOffset.top) * ths.resolutionScale;
+            //or $(this).offset(); if you really just want the current element's offset
+      
+            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
+                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
+                let event = new MouseBtnInputEvent(relX, relY,  InputEventAction.Up);
+                // event.btn = evt.which;
+                if (ths.dragLockElement != null) {
+                    ths.dragLockElement.onDragEnd(event);
+                    ths.dragLockElement = null;
+                }
+                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
+                let currentElement: UIElement | (UIElement & MouseBtnListener)
+                ths.mouseBtnsPressed = false;
+                for (let i = 0; i < overElements.length; i++) {
+                    currentElement = overElements[i];
+                    if (UIElement.hasMouseBtnListener(currentElement)) {
+                        log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
+                        if (currentElement.mouseReleased(event)) {
+                            break;
+                        }
+                    }
+                }
+                evt.preventDefault();
+
+
+            }
+        })
+
+        document.addEventListener('mousemove', (evt: MouseEvent) => {
+            var parentOffset = ths.canvas.offset();
+            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+            let deltaX = relX - ths.iMouseX;
+            let deltaY = relY - ths.iMouseY;
+            ths.iMouseX = relX;
+            ths.iMouseY = relY;
+            let event = new MouseDraggedInputEvent(relX, relY, deltaX, deltaY);
+
+
+
+            let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
+            if (this.mouseOverElement != null) {
+                if (!this.mouseOverElement.frame.isInside(relX, relY)) {
+                    this.mouseOverElement.isMouseTarget = false;
+                    this.mouseOverElement.mouseExit(event);
+                    this.mouseOverElement = null;
+                }
+            }
+            let currentElement: UIElement | (UIElement & MouseMovementListener)
+            for (let i = 0; i < overElements.length; i++) {
+                currentElement = overElements[i]
+                if (UIElement.hasMouseMovementListener(currentElement)) {
+                    if (currentElement.mouseMoved(event)) {
+                        if (this.mouseOverElement != null) {
+                            this.mouseOverElement.mouseExit(event);
+                        }
+                        this.mouseOverElement = currentElement;
+                        this.mouseOverElement.isMouseTarget = true;
+                        this.mouseOverElement.mouseEnter(event);
+                        evt.preventDefault();
+                        break;
+                    }
+                }
+            }
+
+        })
+        document.addEventListener('mousedown', (evt: MouseEvent) => {
+          
+        })
+        document.addEventListener('mouseup', (evt: MouseEvent) => {
+        
+        })
 
         this.ctx = this.canvas.element.getContext('2d');
         // if (this.shouldExecJobs()) {
@@ -159,217 +364,102 @@ export class BristolBoard<RootElementType extends UIElement> {
         //         evt.preventDefault();
         //     }
         // })
-        document.addEventListener('mousemove', (evt: MouseEvent) => {
-            var parentOffset = ths.canvas.offset();
-            //or $(this).offset(); if you really just want the current element's offset
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            let deltaX = relX - ths.iMouseX;
-            let deltaY = relY - ths.iMouseY;
-            ths.iMouseX = relX;
-            ths.iMouseY = relY;
 
-            for (let btnNumber = 0; btnNumber < ths.mouseBtnsPressed.length; btnNumber++) {
-                if (ths.mouseBtnsPressed[btnNumber]) {
-                    let dragEvent = new MouseDraggedInputEvent(relX, relY, btnNumber, deltaX, deltaY);
-                    if (ths.dragLockElement != null) {
-                        ths.dragLockElement.mouseDragged(dragEvent);
-                        return;
-                    }
-                }
-            }
-            let event = new MouseMovedInputEvent(relX, relY, deltaX, deltaY);
+        // this.gesture = new FGesture(this.canvas, {
+        //     onTouchStart: (pos: Coordinate) => {
+        //         if (this.isFullscreen == false && ths.deviceType != DeviceType.Desktop && this.fullscreenOnTouch) {
+        //             this.fullscreen();
+        //         }
 
+        //         pos.x = pos.x * ths.resolutionScale;
+        //         pos.y = pos.y * ths.resolutionScale;
+        //         let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+        //         let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Down);
+        //         ths.mouseBtnsPressed[0] = true;
 
+        //         let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+        //         for (let i = 0; i < overElements.length; i++) {
+        //             currentElement = overElements[i];
+        //             if (UIElement.hasMouseDragListener(currentElement) && currentElement.shouldDragLock(event)) {
+        //                 ths.dragLockElement = currentElement
+        //             }
 
-            let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
-
-            if (this.mouseOverElement != null) {
-                if (!this.mouseOverElement.frame.isInside(relX, relY)) {
-                    this.mouseOverElement.isMouseTarget = false;
-                    this.mouseOverElement.mouseExit(event);
-                    this.mouseOverElement = null;
-                }
-            }
-            let currentElement: UIElement | (UIElement & MouseMovementListener)
-            for (let i = 0; i < overElements.length; i++) {
-                currentElement = overElements[i]
-                if (UIElement.hasMouseMovementListener(currentElement)) {
-                    if (currentElement.mouseMoved(event)) {
-                        if (this.mouseOverElement != null) {
-                            this.mouseOverElement.mouseExit(event);
-                        }
-                        this.mouseOverElement = currentElement;
-                        this.mouseOverElement.isMouseTarget = true;
-                        this.mouseOverElement.mouseEnter(event);
-                        evt.preventDefault();
-                        break;
-                    }
-                }
-            }
-
-        })
-        document.addEventListener('mousedown', (evt: MouseEvent) => {
-            if (this.isFullscreen == false) {
-                // this.fullscreen();
-            }
-            var parentOffset = ths.canvas.offset();
-
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
-                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-
-                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
-                let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
-                ths.mouseBtnsPressed[evt.which] = true;
-
-                let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
-
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    if (UIElement.hasMouseDragListener(currentElement)) {
-                        if (currentElement.shouldDragLock(event)) {
-                            ths.dragLockElement = currentElement
-                        }
-                    }
-                    if (UIElement.hasMouseBtnListener(currentElement)) {
-                        log.naughty(`Checking mousePressed on ${currentElement.id}`)
-                        if (currentElement.mousePressed(event)) {
-                            break;
-                        }
-                    }
-
-                }
-                evt.preventDefault();
-
-            }
-        })
-        document.addEventListener('mouseup', (evt: MouseEvent) => {
-            var parentOffset = ths.canvas.offset();
-            //or $(this).offset(); if you really just want the current element's offset
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
-                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-                let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Up);
-                if (ths.dragLockElement != null) {
-                    ths.dragLockElement.onDragEnd(event);
-                    ths.dragLockElement = null;
-                }
-                let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
-
-                let currentElement: UIElement | (UIElement & MouseBtnListener)
-                ths.mouseBtnsPressed[evt.which] = false;
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    if (UIElement.hasMouseBtnListener(currentElement)) {
-                        log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
-                        if (currentElement.mouseReleased(event)) {
-                            break;
-                        }
-                    }
-                }
-                evt.preventDefault();
-
-
-            }
-        })
-        this.gesture = new FGesture(this.canvas, {
-            onTouchStart: (pos: Coordinate) => {
-                if (this.isFullscreen == false && ths.deviceType != DeviceType.Desktop && this.fullscreenOnTouch) {
-                    this.fullscreen();
-                }
-
-                pos.x = pos.x * ths.resolutionScale;
-                pos.y = pos.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
-                let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Down);
-                ths.mouseBtnsPressed[0] = true;
-
-                let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.shouldDragLock(event)) {
-                        ths.dragLockElement = currentElement
-                    }
-
-                    log.naughty(`Checking mousePressed on ${overElements[i].id}`)
-                    if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mousePressed(event)) {
-                        break;
-                    }
-                }
+        //             log.naughty(`Checking mousePressed on ${overElements[i].id}`)
+        //             if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mousePressed(event)) {
+        //                 break;
+        //             }
+        //         }
 
 
 
-            },
-            onTouchEnd: (pos: Coordinate) => {
-                if (this.isFullscreen == false) {
-                    // this.fullscreen();
-                }
+        //     },
+        //     onTouchEnd: (pos: Coordinate) => {
+        //         if (this.isFullscreen == false) {
+        //             // this.fullscreen();
+        //         }
 
-                pos.x = pos.x * ths.resolutionScale;
-                pos.y = pos.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
-                let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Up);
-                if (ths.dragLockElement != null) {
-                    ths.dragLockElement.onDragEnd(event);
-                    ths.dragLockElement = null;
-                }
-                ths.mouseBtnsPressed[0] = false;
-                let currentElement: UIElement | (UIElement & MouseBtnListener)
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    log.debug(`Checking mouseReleased on ${overElements[i].id}`)
-                    if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mouseReleased(event)) {
-                        break;
-                    }
-                }
-            },
-            onDrag: (pos: Coordinate, delta: Coordinate) => {
-                // console.log('drag', { pos, delta })
-                pos.x = pos.x * ths.resolutionScale;
-                pos.y = pos.y * ths.resolutionScale;
-                delta.x = delta.x * ths.resolutionScale;
-                delta.y = delta.y * ths.resolutionScale;
-                let event = new MouseDraggedInputEvent(pos.x, pos.y, 1, delta.x, delta.y);
+        //         pos.x = pos.x * ths.resolutionScale;
+        //         pos.y = pos.y * ths.resolutionScale;
+        //         let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+        //         let event = new MouseBtnInputEvent(pos.x, pos.y, 1, InputEventAction.Up);
+        //         if (ths.dragLockElement != null) {
+        //             ths.dragLockElement.onDragEnd(event);
+        //             ths.dragLockElement = null;
+        //         }
+        //         ths.mouseBtnsPressed[0] = false;
+        //         let currentElement: UIElement | (UIElement & MouseBtnListener)
+        //         for (let i = 0; i < overElements.length; i++) {
+        //             currentElement = overElements[i];
+        //             log.debug(`Checking mouseReleased on ${overElements[i].id}`)
+        //             if (UIElement.hasMouseBtnListener(currentElement) && currentElement.mouseReleased(event)) {
+        //                 break;
+        //             }
+        //         }
+        //     },
+        //     onDrag: (pos: Coordinate, delta: Coordinate) => {
+        //         // console.log('drag', { pos, delta })
+        //         pos.x = pos.x * ths.resolutionScale;
+        //         pos.y = pos.y * ths.resolutionScale;
+        //         delta.x = delta.x * ths.resolutionScale;
+        //         delta.y = delta.y * ths.resolutionScale;
+        //         let event = new MouseDraggedInputEvent(pos.x, pos.y, 1, delta.x, delta.y);
 
-                if (ths.dragLockElement != null) {
-                    ths.dragLockElement.mouseDragged(event);
-                    return;
-                }
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+        //         if (ths.dragLockElement != null) {
+        //             ths.dragLockElement.mouseDragged(event);
+        //             return;
+        //         }
+        //         let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
 
-                let currentElement: UIElement | (UIElement & MouseDragListener)
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    log.naughty(`Checking mouseDragged on ${overElements[i].id}`)
-                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.mouseDragged(event)) {
-                        break;
-                    }
-                }
-            },
-            onPinch: (pos: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => {
-                // console.log('pinch', { pos, dragDelta, pinchDelta })
-                pos.x = pos.x * ths.resolutionScale;
-                pos.y = pos.y * ths.resolutionScale;
-                dragDelta.x = dragDelta.x * ths.resolutionScale;
-                dragDelta.y = dragDelta.y * ths.resolutionScale;
-                pinchDelta.x = pinchDelta.x * ths.resolutionScale;
-                pinchDelta.y = pinchDelta.y * ths.resolutionScale;
-                let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
-                let event = new MousePinchedInputEvent(pos.x, pos.y, 1, dragDelta.x, dragDelta.y, pinchDelta.x, pinchDelta.y);
+        //         let currentElement: UIElement | (UIElement & MouseDragListener)
+        //         for (let i = 0; i < overElements.length; i++) {
+        //             currentElement = overElements[i];
+        //             log.naughty(`Checking mouseDragged on ${overElements[i].id}`)
+        //             if (UIElement.hasMouseDragListener(currentElement) && currentElement.mouseDragged(event)) {
+        //                 break;
+        //             }
+        //         }
+        //     },
+        //     onPinch: (pos: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => {
+        //         // console.log('pinch', { pos, dragDelta, pinchDelta })
+        //         pos.x = pos.x * ths.resolutionScale;
+        //         pos.y = pos.y * ths.resolutionScale;
+        //         dragDelta.x = dragDelta.x * ths.resolutionScale;
+        //         dragDelta.y = dragDelta.y * ths.resolutionScale;
+        //         pinchDelta.x = pinchDelta.x * ths.resolutionScale;
+        //         pinchDelta.y = pinchDelta.y * ths.resolutionScale;
+        //         let overElements = ths.rootElement?.findElementsUnderCursor(pos.x, pos.y)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+        //         let event = new MousePinchedInputEvent(pos.x, pos.y, 1, dragDelta.x, dragDelta.y, pinchDelta.x, pinchDelta.y);
 
-                let currentElement: UIElement | (UIElement & MouseDragListener)
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i];
-                    log.naughty(`Checking mousePinched on ${overElements[i].id}`)
-                    if (UIElement.hasMouseDragListener(currentElement) && currentElement.mousePinched(event)) {
-                        break;
-                    }
-                }
-            }
-        });
+        //         let currentElement: UIElement | (UIElement & MouseDragListener)
+        //         for (let i = 0; i < overElements.length; i++) {
+        //             currentElement = overElements[i];
+        //             log.naughty(`Checking mousePinched on ${overElements[i].id}`)
+        //             if (UIElement.hasMouseDragListener(currentElement) && currentElement.mousePinched(event)) {
+        //                 break;
+        //             }
+        //         }
+        //     }
+        // });
         // this.canvas.on('keydown', (event: JQuery.KeyDownEvent<HTMLCanvasElement, null, HTMLCanvasElement, HTMLCanvasElement>)=>{
         //     return ths.keyDown(event);
         // })
@@ -387,21 +477,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
 
     rootElement: RootElementType = null;
-    // mousePressed(evt: MouseBtnInputEvent) {
-    //     return this.rootElement.mousePressed(evt);
-    // }
-    // mouseReleased(evt: MouseBtnInputEvent) {
-    //     return this.rootElement.mouseReleased(evt);
-    // }
-    // mouseMoved(event: MouseMovedInputEvent) {
-    //     return false;
-    // }
-    // keyUp(event: KeyboardInputEvent): boolean {
-    //     return false;
-    // }
-    // keyDown(event: KeyboardInputEvent): boolean {
-    //     return false;
-    // }
+
     pixelDensity(): number {
         return window.devicePixelRatio;
     }

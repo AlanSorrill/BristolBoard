@@ -56,7 +56,7 @@ export class FGesture {
                     ths.touchPoints[ev.targetTouches[0].identifier].delta
                 )
             } else if (ev.targetTouches.length == 2) {
-
+                ths.touchPoints[ev.targetTouches[0].identifier].delta
             }
 //             console.log(ev);
         })

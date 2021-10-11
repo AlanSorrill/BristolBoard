@@ -1,5 +1,5 @@
 import { BristolFontFamily, BristolHAlign, BristolVAlign, FColor } from '..';
-import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
+import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent,  MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
 
 
 export abstract class UIElement {
@@ -270,13 +270,13 @@ export enum MouseState {
 export interface MouseMovementListener {
     mouseEnter(evt: MouseInputEvent): boolean
     mouseExit(evt: MouseInputEvent): boolean
-    mouseMoved(evt: MouseMovedInputEvent): boolean
+    mouseMoved(evt: MouseDraggedInputEvent): boolean
 }
 export interface MouseDragListener {
-    shouldDragLock(event: MouseBtnInputEvent): boolean
+    shouldDragLock(event: MouseBtnInputEvent | MouseDraggedInputEvent): boolean
     mouseDragged(evt: MouseDraggedInputEvent): boolean
     mousePinched(evt: MousePinchedInputEvent): boolean
-    onDragEnd(event: MouseBtnInputEvent): boolean
+    onDragEnd(event: MouseDraggedInputEvent | MouseBtnInputEvent): boolean
 }
 export interface KeyListener {
     keyPressed(evt: KeyboardInputEvent): boolean

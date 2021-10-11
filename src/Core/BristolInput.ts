@@ -35,13 +35,13 @@ export class MouseInputEvent implements BristolInputEvent {
 export class MouseBtnInputEvent extends MouseInputEvent {
     btn: number;
     action: InputEventAction;
-    constructor(x: number, y: number, btn: number, action: InputEventAction = null) {
+    constructor(x: number, y: number, action: InputEventAction = null) {
         super(x, y);
         this.action = action;
-        this.btn = btn;
+        
     }
 }
-export class MouseMovedInputEvent extends MouseInputEvent {
+export class MouseDraggedInputEvent extends MouseInputEvent {
     deltaX: number;
     deltaY: number;
     constructor(x: number, y: number, deltaX: number, deltaY: number) {
@@ -57,14 +57,8 @@ export class MouseScrolledInputEvent extends MouseInputEvent {
         this.amount = amount;
     }
 }
-export class MouseDraggedInputEvent extends MouseMovedInputEvent {
-    btn: number
-    constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number) {
-        super(x, y, deltaX, deltaY);
-        this.btn = btn;
-    }
-}
-export class MousePinchedInputEvent extends MouseMovedInputEvent {
+
+export class MousePinchedInputEvent extends MouseDraggedInputEvent {
     btn: number
     pinchX: number;
     pinchY: number;

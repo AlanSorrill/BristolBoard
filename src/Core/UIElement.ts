@@ -183,7 +183,9 @@ export abstract class UIElement {
         this.childElements.clear();
 
     }
-
+    setFrame(frame: UIFrame){
+        this.frame = frame;
+    }
 
 
     private dfc: FColor = null;

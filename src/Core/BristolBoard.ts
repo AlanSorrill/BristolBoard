@@ -182,15 +182,18 @@ export class BristolBoard<RootElementType extends UIElement> {
 
 
 
-            let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
-
+            
             if (this.mouseOverElement != null) {
                 if (!this.mouseOverElement.frame.containsPoint(relX, relY)) {
                     this.mouseOverElement.isMouseTarget = false;
                     this.mouseOverElement.mouseExit(event);
                     this.mouseOverElement = null;
+                } else {
+                    return;
                 }
             }
+            let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
             let currentElement: UIElement | (UIElement & MouseMovementListener)
             for (let i = 0; i < overElements.length; i++) {
                 currentElement = overElements[i]

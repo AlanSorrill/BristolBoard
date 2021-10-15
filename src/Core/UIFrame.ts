@@ -1,4 +1,4 @@
-import { optFunc, evalOptionalFunc } from '../BristolImports'
+import { optFunc, evalOptionalFunc, BristolBoard } from '../BristolImports'
 
 export interface UIFrameResult {
     left: number,
@@ -102,7 +102,8 @@ export abstract class UIFrame {
     measureHeight(): number {
         return this.bottomY() - this.topY();
     }
-    public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame | UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
+    public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame, parent: UIFrame = null) {
+       
         if (description instanceof UIFrame) {
             //pass through to allow for custom UIFrame construction
             return description;

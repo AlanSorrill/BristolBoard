@@ -78,7 +78,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
             bindData: (index: number, data: DataType[], child: RowView) => {
                 let d = child.source as ArraySource<DataType>;
                 d.data = data;
-
+                child.refeshData();
             },
             buildChild: (frame: UIFrame, brist: BristolBoard<any>) => {
                 let rowView: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = new UIStackRecycler<DataType, ViewType>(new ArraySource([]), {
@@ -116,7 +116,9 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         this.rootElement.onAddToParent();
         //childElement.frame.parent = this.frame;
         //childElement.onAddToParent();
-        this.options.bindData(0, this.source.get(0), this.rootElement.child);
+        if (this.source.count() > 0) {
+            this.options.bindData(0, this.source.get(0), this.rootElement.child);
+        }
     }
     refeshData() {
         if (this.rootIndex >= this.source.count()) {

@@ -44,6 +44,9 @@ Array.prototype.toSubArrays = function <T>(subArrayLength: number): Array<T>[] {
             current = [];
         }
     }
+    if(current.length > 0){
+        out.push(current);
+    }
     return out;
 }
 

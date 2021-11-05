@@ -38,6 +38,16 @@ export abstract class UIElement {
 
 
 
+    get isAttachedToBristol() {
+        if (this.parent instanceof BristolBoard) {
+            return true;
+        }
+        if (this.parent instanceof UIElement) {
+            return this.parent.isAttachedToBristol;
+        }
+        return false;
+    }
+
     measure(deltaTime: number) {
         let ths = this;
         this.frame.result = {
@@ -158,6 +168,19 @@ export abstract class UIElement {
         return this.childElements.find((elem) => (elem.id == childId));
 
     }
+    private onAttachToBristolListeners: (() => void)[] = []
+
+    addOnAttachToBristolListener(listener: () => void) {
+        if (this.isAttachedToBristol) {
+            listener();
+        } else {
+            if (this.parent != null) {
+                (this.parent as UIElement).addOnAttachToBristolListener(listener);
+            } else {
+                this.onAttachToBristolListeners.push(listener);
+            }
+        }
+    }
     addChild(childElement: UIElement) {
         let i = this.childElements.add(childElement);
         childElement.parent = this;
@@ -167,12 +190,21 @@ export abstract class UIElement {
     }
     removeFromParent() {
         if (this.parent instanceof UIElement) {
+            this.onRemoveFromParent();
             this.parent.removeChild(this.id);
         } else {
-           throw new Error(`Cannot remove root element ${this.id}`)
+            throw new Error(`Cannot remove root element ${this.id}`)
         }
     }
     onAddToParent() {
+        while (this.onAttachToBristolListeners.length > 0) {
+            let listener = this.onAttachToBristolListeners.pop();
+            if (this.parent instanceof BristolBoard) {
+                listener();
+            } else {
+                this.parent.onAttachToBristolListeners.push(listener);
+            }
+        }
     }
     onRemoveFromParent() {
     }
@@ -183,7 +215,7 @@ export abstract class UIElement {
         this.childElements.clear();
 
     }
-    setFrame(frame: UIFrame){
+    setFrame(frame: UIFrame) {
         this.frame = frame;
     }
 
@@ -213,10 +245,10 @@ export abstract class UIElement {
             this.brist.line(this.frame.result.left, this.frame.result.bottom, this.frame.result.left, this.frame.result.top);
             this.brist.ellipse(this.frame.result.centerX, this.frame.result.centerY, weight * 2, weight * 2);
             // this.brist.ctx.strokeRect(this.frame.upLeftX(), this.frame.topY(), this.frame.measureWidth(), this.frame.measureHeight());
-//             this.brist.fontFamily(BristolFontFamily.Roboto);
-//             this.brist.textSize(12);
-//             this.brist.textAlign(BristolHAlign.Left, BristolVAlign.Top);
-//             this.brist.text(this.id, this.frame.result.left, this.frame.result.top)
+            //             this.brist.fontFamily(BristolFontFamily.Roboto);
+            //             this.brist.textSize(12);
+            //             this.brist.textAlign(BristolHAlign.Left, BristolVAlign.Top);
+            //             this.brist.text(this.id, this.frame.result.left, this.frame.result.top)
             if (drawChildFrames) {
                 this.forEachVisibleChild((elem: UIElement) => {
                     elem.drawUIFrame(true, weight);
@@ -236,7 +268,7 @@ export abstract class UIElement {
     static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
         return IsType<MouseDragListener>(target, 'mouseDragged')
     }
-    static hasWheelListener(target: UIElement): target is(UIElement & MouseWheelListener){
+    static hasWheelListener(target: UIElement): target is (UIElement & MouseWheelListener) {
         return IsType<MouseWheelListener>(target, 'mouseWheel');
     }
     static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {

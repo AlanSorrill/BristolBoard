@@ -1,10 +1,10 @@
-import {evalOptionalFunc, optFunc, urlParse, isNumber } from './CommonImports';
+import { evalOptionalFunc, optFunc, urlParse, isNumber } from './CommonImports';
 
 
 
 export type UrlDataType = (string | number | boolean | UrlDataType[])
 export interface UrlListener {
-    onValueSet(key: string, value: UrlDataType): void
+    onUrlParamSet(key: string, value: UrlDataType): void
 
 }
 export class UrlManager {
@@ -12,7 +12,7 @@ export class UrlManager {
     setListener(listener: UrlListener) {
         this.listener = listener;
         this.queryValues.forEach((value: UrlDataType, key: string) => {
-            listener.onValueSet(key, value);
+            listener.onUrlParamSet(key, value);
         })
     }
     base: string;
@@ -25,21 +25,23 @@ export class UrlManager {
                 this.queryValues.set(key, true)
             } else if (val.toLocaleLowerCase() == 'false') {
                 this.queryValues.set(key, false)
-            } else if(isNumber(val)){
+            } else if (isNumber(val)) {
                 this.queryValues.set(key, Number(val))
             } else {
                 this.queryValues.set(key, val);
             }
-            
+
         }
     }
     get parsed() {
         return urlParse(window.location.href);
     }
     queryValues: Map<string, UrlDataType> = new Map();
-    set<T extends UrlDataType>(key: string, value: T) {
+    set<T extends UrlDataType>(key: string, value: T, notifyListeners: boolean = true) {
         this.queryValues.set(key, value);
-        this.listener?.onValueSet(key, value);
+        if (notifyListeners) {
+            this.listener?.onUrlParamSet(key, value);
+        }
         this.update();
     }
     get<T extends UrlDataType>(key: string, defaultValue: optFunc<T> = null): T {

@@ -36,15 +36,15 @@ Map.prototype.toArray = function <K, V>() {
 Array.prototype.toSubArrays = function <T>(subArrayLength: number): Array<T>[] {
     let out: Array<T>[] = [];
     let current: Array<T> = [];
-    for(let i = 0;i<this.length;i++){
-        if(current.length < subArrayLength){
+    for (let i = 0; i < this.length; i++) {
+        if (current.length < subArrayLength) {
             current.push(this[i]);
         } else {
             out.push(current);
             current = [this[i]];
         }
     }
-    if(current.length > 0){
+    if (current.length > 0) {
         out.push(current);
     }
     return out;
@@ -136,6 +136,12 @@ export function evalOptionalFunc<T>(input: optFunc<T>, def: T = null) {
     }
 
     return input;
+}
+export function ifUndefined<T>(value: T, defaultValue: T): T {
+    if (typeof value == 'undefined') {
+        return defaultValue;
+    }
+    return value;
 }
 export function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(value, min));

@@ -1,7 +1,7 @@
 
 import {
     BristolFontStyle, BristolFontWeight, BristolFontFamily, BristolHAlign, BristolVAlign, LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML,
-    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, KeyboardInputKey, MouseBtnInputEvent, MouseDraggedInputEvent, MouseMovedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent
+    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, KeyboardInputKey, MouseBtnInputEvent, MouseDraggedInputEvent, MouseMovedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, BristolCursor, Interp
 } from "../BristolImports";
 
 
@@ -13,8 +13,8 @@ export class BristolBoard<RootElementType extends UIElement> {
 
     containerDiv: FHTML<HTMLDivElement>;
     canvas: FHTML<HTMLCanvasElement>;
-    
-    
+
+
     ctx: CanvasRenderingContext2D;
     mouseBtnsPressed: [boolean, boolean, boolean] = [false, false, false]
     // jobExecutor: JobExecutor = null;
@@ -40,7 +40,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         let ths = this;
         //this.uiElements = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
         this.containerDiv = new FHTML(containerDivElem);
-        
+
         this.canvas = new FHTML(document.createElement('canvas'));
         this.canvas.attr('oncontextmenu', 'return false');
         this.containerDiv.append(this.canvas);
@@ -63,7 +63,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
             if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
                 relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-                let event = new MouseScrolledInputEvent(relX, relY, evt.deltaY);
+                let event = new MouseScrolledInputEvent(relX, relY, evt.deltaY > 0 ? 1 : -1);
 
                 let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
 
@@ -173,8 +173,12 @@ export class BristolBoard<RootElementType extends UIElement> {
                 if (ths.mouseBtnsPressed[btnNumber]) {
                     let dragEvent = new MouseDraggedInputEvent(relX, relY, btnNumber, deltaX, deltaY);
                     if (ths.dragLockElement != null) {
-                        ths.dragLockElement.mouseDragged(dragEvent);
-                        return;
+                        if (!ths.dragLockElement.mouseDragged(dragEvent)) {
+                            ths.dragLockElement.onDragEnd(dragEvent);
+                            ths.dragLockElement = null;
+                        } else {
+                            return;
+                        }
                     }
                 }
             }
@@ -182,7 +186,7 @@ export class BristolBoard<RootElementType extends UIElement> {
 
 
 
-            
+
             if (this.mouseOverElement != null) {
                 if (!this.mouseOverElement.frame.containsPoint(relX, relY)) {
                     this.mouseOverElement.isMouseTarget = false;
@@ -445,11 +449,18 @@ export class BristolBoard<RootElementType extends UIElement> {
         // }
 
         if (this.autoFrames) {
-            setTimeout(() => {
+            if (this.deltaDrawTime >= this.targetFrameTime || this.targetFps == -1) {
                 window.requestAnimationFrame(() => {
                     ths.draw();
                 });
-            }, Math.max(this.targetFrameTime - this.deltaDrawTime, 0))
+            } else {
+                setTimeout(() => {
+                    window.requestAnimationFrame(() => {
+                        ths.draw();
+                    });
+                }, Math.max(this.targetFrameTime - this.deltaDrawTime, 0))
+            }
+
         }
 
     }
@@ -657,7 +668,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     strokeWeight(weight: number) {
         this.ctx.lineWidth = weight;
     }
-    cursor(cursorCss: string) {
+    cursor(cursorCss: BristolCursor) {
         this.canvas.setCss('cursor', cursorCss);
     }
     background(color: FColor) {
@@ -712,7 +723,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.font.weight = weight;
         this.ctx.font = this.font.toString();
     }
-    textSizeMaxWidth(perferredSize: number, textToMeasure: string, maxWidth: number, stepSize: number = 2) {
+    textSizeMaxWidth(perferredSize: number, textToMeasure: string, maxWidth: number, stepSize: number = 5) {
         this.textSize(perferredSize);
         let textMetrics = this.ctx.measureText(textToMeasure);
         let textWidth = Math.abs(textMetrics.actualBoundingBoxLeft) +
@@ -773,9 +784,45 @@ export class BristolBoard<RootElementType extends UIElement> {
         }
     }
 
-    
+
     shouldExecJobs(): boolean {
         return false;
+    }
+
+    highFpsRequests: HighFpsRequest = null;
+    manageHighFpsRequests() {
+        if (this.highFpsRequests == null) {
+            this.targetFps = 20;
+            return;
+        }
+        this.targetFps = 60;
+        if (!this.highFpsRequests[0]()) {
+            this.highFpsRequests = this.highFpsRequests[1];
+        }
+        if (this.highFpsRequests == null) {
+            this.targetFps = 20;
+            return;
+        }
+        let last = this.highFpsRequests;
+        let current = this.highFpsRequests[1];
+        while (current != null) {
+            if (!current[0]()) {
+                last[1] = current[1];
+            }
+            last = current;
+            current = current[1];
+        }
+    }
+    requestHighFps(lock: () => boolean) {
+        if (this.highFpsRequests == null) {
+            this.highFpsRequests = [lock, null];
+            return;
+        }
+        let current = this.highFpsRequests;
+        while (current[1] != null) {
+            current = current[1];
+        }
+        current[1] = [lock, null];
     }
 
     onDraw(deltaMs: number): void {
@@ -783,6 +830,9 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.noStroke();
         this.fillColor(fColor.grey.darken3);
         this.ctx.fillRect(0, 0, this.width, this.height);
+
+        //this.targetFps = Interp.highFPSRequests > 0 ? 60 : 20;
+        this.manageHighFpsRequests();
 
         this.rootElement?.measure(deltaMs);
         this.rootElement?.draw(deltaMs);
@@ -832,7 +882,7 @@ export class BristolFont {
     }
 }
 
-
+export type HighFpsRequest = [(() => boolean), HighFpsRequest]
 export interface CornerRadius {
     upperLeft: number
     upperRight: number

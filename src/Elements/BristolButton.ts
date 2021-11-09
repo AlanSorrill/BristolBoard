@@ -80,6 +80,7 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
         this.mouseState = this.isMouseTarget ? MouseState.Over : MouseState.Gone;
         return true;
     }
+    
     mouseEnter(evt: MouseInputEvent) {
         this.mouseState = MouseState.Over;
         return true;

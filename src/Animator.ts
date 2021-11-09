@@ -1,5 +1,5 @@
 
-import { evalOptionalFunc, lerp,optFunc } from './CommonImports'
+import { evalOptionalFunc, ifUndefined, lerp, optFunc } from './CommonImports'
 
 export class Animator<n> {
     time: number = 0;
@@ -53,10 +53,20 @@ export class InterpManager {
 
     }
 }
+export interface InterpOptions<T> {
+    durration?: optFunc<number>,
+    
+    startAlpha?: number
+    onAnimStart?: (interp: Interp<T>) => void
+    onAnimEnd?: (interp: Interp<T>) => void
+}
 export class Interp<T> {
+    static highFPSRequests: number = 0;
+
     a: optFunc<T>;
     b: optFunc<T>;
-    method: InterpMethod<T>;
+    get method(): InterpMethod<T> { return this.options }
+    options: InterpOptions<T> & InterpMethod<T>
     lastToggle: {
         target: InterpEnd
         time: number,
@@ -64,11 +74,12 @@ export class Interp<T> {
     }
     durration: optFunc<number>;
     target: optFunc<InterpEnd>
-    constructor(a: optFunc<T>, b: optFunc<T>, target: optFunc<InterpEnd>, durration: optFunc<number>, method: InterpMethod<T>) {
+    isTransitioning: boolean = false;
+    constructor(a: optFunc<T>, b: optFunc<T>, target: optFunc<InterpEnd>, options: InterpOptions<T> & InterpMethod<T>) {
         this.a = a;
         this.b = b;
-        this.method = method;
-        this.durration = durration;
+        this.options = options;
+        this.durration = ifUndefined(options.durration, 200);
         this.target = target;
         let startTarget = evalOptionalFunc(target, 'B');
         this.lastToggle = {
@@ -76,9 +87,10 @@ export class Interp<T> {
             time: Date.now(),
             value: 0
         }
+        this.alpha = ifUndefined(options.startAlpha, 0);
     }
     get alpha(): number {
-        
+
         let durration = evalOptionalFunc(this.durration, 1000);
 
         // let alpha;
@@ -99,13 +111,27 @@ export class Interp<T> {
             this.lastToggle.target = evalOptionalFunc(this.target);
             this.lastToggle.time = Date.now() - (1 - durrationAlpha) * durration;
 
-           // this.lastToggle.value = Math.max(0, durrationAlpha)
+            // this.lastToggle.value = Math.max(0, durrationAlpha)
 
+        }
+        if (this.isTransitioning) {
+            if (durrationAlpha == 1 || durrationAlpha == 0) {
+                this.isTransitioning = false;
+                this.options.onAnimEnd?.(this);
+                
+            }
+        } else {
+            if (durrationAlpha != 1 && durrationAlpha != 0) {
+                this.isTransitioning = true;
+                this.options.onAnimStart?.(this);
+                
+            }
         }
 
         return durrationAlpha;
 
     }
+
     set alpha(fresh: number) {
         let durration = evalOptionalFunc(this.durration, 1000);
         this.lastToggle.time = Date.now() - (fresh) * durration;
@@ -117,18 +143,17 @@ export class Interp<T> {
 
         return this.method.mixer(evalOptionalFunc(this.b), evalOptionalFunc(this.a), this.method.curve(this.alpha))
     }
-
+  
 }
 
 
-export function interpFunc<T>(a: optFunc<T>, b: optFunc<T>, target: optFunc<InterpEnd>, durration: optFunc<number>, method: InterpMethod<T>, startAlpha: number = 0): () => T {
-    let interper = new Interp<T>(a, b, target, durration, method);
-    interper.alpha = (startAlpha);
+export function interpFunc<T>(a: optFunc<T>, b: optFunc<T>, target: optFunc<InterpEnd>, options: InterpOptions<T> & InterpMethod<T>): () => T {
+    let interper = new Interp<T>(a, b, target, options);
     return () => interper.getValue();
 }
-export function linearInterp(a: optFunc<number>, b: optFunc<number>, target: optFunc<InterpEnd>, durration: optFunc<number>, startAlpha: number = 0) {
-    return interpFunc(a, b, target, durration, {
-        curve: (alpha) => alpha,
-        mixer: (a: number, b: number, alpha: number) => lerp(a, b, alpha)
-    },startAlpha)
+export function linearInterp(a: optFunc<number>, b: optFunc<number>, target: optFunc<InterpEnd>, options: InterpOptions<number>) {
+    let opts: InterpOptions<number> & InterpMethod<number> = options as any;
+    opts.curve = (alpha) => alpha,
+    opts.mixer = (a: number, b: number, alpha: number) => lerp(a, b, alpha)
+    return interpFunc(a, b, target, opts)
 }

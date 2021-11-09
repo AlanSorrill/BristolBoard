@@ -1,4 +1,5 @@
-import { optFunc, evalOptionalFunc, BristolBoard } from '../BristolImports'
+import { evalOptionalTransfrom } from '..';
+import { optFunc, evalOptionalFunc, BristolBoard, optTransform } from '../BristolImports'
 
 export interface UIFrameResult {
     left: number,
@@ -103,11 +104,12 @@ export abstract class UIFrame {
         return this.bottomY() - this.topY();
     }
     public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame, parent: UIFrame = null) {
-       
+
         if (description instanceof UIFrame) {
             //pass through to allow for custom UIFrame construction
             return description;
         }
+
         if (typeof description['width'] != 'undefined') {
             return new UIFrame_CornerWidthHeight(description as any as UIFrameDescription_CornerWidthHeight, parent);
         }
@@ -122,11 +124,14 @@ export enum UICorner {
 }
 export class UIFrame_CornerWidthHeight extends UIFrame {
     description: UIFrameDescription_CornerWidthHeight;
-    
+
     constructor(description: UIFrameDescription_CornerWidthHeight, parent: UIFrame = null) {
         super();
         this.description = description;
         this.parent = parent;
+    }
+    isVisible() {
+        return evalOptionalTransfrom(this.description.visible, this.result, true)
     }
 
 
@@ -261,6 +266,7 @@ export interface UIFrameDescription {
     x: optFunc<number>,
     y: optFunc<number>,
     coordType?: optFunc<CoordType>// = CoordType.Relative
+    visible?: optTransform<UIFrameResult, boolean>
 }
 export interface UIFrameDescription_CornerWidthHeight extends UIFrameDescription {
     width: optFunc<number>, //= 0

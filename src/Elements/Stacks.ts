@@ -1,5 +1,5 @@
 
-import { MouseWheelListener } from '..';
+import { isNumber, MouseWheelListener } from '..';
 import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
 import { MouseScrolledInputEvent } from '../BristolInput';
 let log = logger.local('UIStack');
@@ -71,7 +71,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         if (typeof options.rowHeight == 'undefined') {
             options.rowHeight = (row: number) => (frame.result.height / rowCount());
         }
-        let out: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = new UIStackRecycler<DataType[], RowView>(UIStackRecycler.SourceFromArray(data.toSubArrays(options.cols)), {
+        let out: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) =  UIStackRecycler.create<DataType[], RowView>(UIStackRecycler.SourceFromArray(data.toSubArrays(options.cols)), {
             isVertical: true,
             overscroll: OverScrollBehavior.hard,
             childLength: (index: number) => { return options.rowHeight(Math.floor(index / options.cols)); },
@@ -81,7 +81,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                 child.refeshData();
             },
             buildChild: (frame: UIFrame, brist: BristolBoard<any>) => {
-                let rowView: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = new UIStackRecycler<DataType, ViewType>(new ArraySource([]), {
+                let rowView: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = UIStackRecycler.create<DataType, ViewType>(new ArraySource([]), {
                     'bindData': options.bindData,
                     'buildChild': options.buildCell,
                     childLength: (index: number) => options.columnWidth(index % options.cols),
@@ -102,8 +102,21 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     onDrawForeground(frame: UIFrameResult, deltaTime: number): void {
         this.brist.ctx.restore();
     }
-
-    constructor(source: DataType[] | { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame, brist: BristolBoard<any>) {
+    public static create<DataType, ChildType extends UIElement>(source: DataType[] | { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame, brist: BristolBoard<any>){
+        return new Proxy(new UIStackRecycler(source, options, frame, brist), {
+            get: function(target: UIStackRecycler<DataType, ChildType>, key: string){
+                if(isNumber(key)){
+                    let index = Number(key);
+                    if(index < 0 || index >= target.source.count()){
+                        throw new Error(`Index ${index} out of bounds 0 - ${target.source.count()}`);
+                    }
+                    return [target.source.get(index), target.getChildByIndex(index)];
+                }
+                return target[key]
+            }
+        });
+    }
+    private constructor(source: DataType[] | { count: () => number, get: (index: number) => DataType }, options: UIStackOptions<DataType, ChildType>, frame: UIFrame, brist: BristolBoard<any>) {
         super(UIElement.createUID('stack'), frame, brist);
         this.options = options;
         if (IsType<UIStackRecyclerSource<DataType>>(source, 'count')) {
@@ -330,13 +343,29 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         //     }
         // })
     }
-    forEachVisibleChild(onEach: (elem: UIElement, index: number) => void) {
+    forEachVisibleChild(onEach: (elem: UIStackChildContainer<DataType, ChildType>, index: number) => (void | boolean)) {
         let elem = this.rootElement;
         let index = this.rootIndex;
         while (elem != null) {
-            onEach(elem, index);
+            if(onEach(elem, index) === false){
+                break;
+            };
             elem = elem.next;
             index++;
+        }
+    }
+    getChildByIndex(index: number){
+        if(index < this.rootIndex){
+            return null;
+        } else {
+            let found: ChildType = null;
+            this.forEachVisibleChild((elem: UIStackChildContainer<DataType, ChildType>, elemIndex: number)=>{
+                if(elemIndex ==  index){
+                    found = elem.child;
+                    return false;
+                }
+            })
+            return found;
         }
     }
     addExtraElement(elem: UIStackChildContainer<DataType, ChildType>) {
@@ -391,7 +420,7 @@ export class UIStackChildContainer<DataType, ChildType extends UIElement> extend
                         return 0;
                     }, width: () => ths.width, height: () => parent.options.childLength(ths.index)
                 })
-                out.visible
+                
                 return out;
             } else {
                 let out = UIFrame.Build({
@@ -402,7 +431,7 @@ export class UIStackChildContainer<DataType, ChildType extends UIElement> extend
                         return 0;
                     }, y: 0, width: () => ths.width, height: () => parent.options.childLength(ths.index)
                 })
-                out.visible
+                
                 return out;
             }
 

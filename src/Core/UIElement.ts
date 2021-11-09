@@ -293,7 +293,7 @@ export interface MouseDragListener {
     shouldDragLock(event: MouseBtnInputEvent): boolean
     mouseDragged(evt: MouseDraggedInputEvent): boolean
     mousePinched(evt: MousePinchedInputEvent): boolean
-    onDragEnd(event: MouseBtnInputEvent): boolean
+    onDragEnd(event: MouseBtnInputEvent | MouseDraggedInputEvent): boolean
 }
 export interface KeyListener {
     keyPressed(evt: KeyboardInputEvent): boolean

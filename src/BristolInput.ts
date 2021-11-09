@@ -1,7 +1,26 @@
 
 export interface BristolInputEvent {
-
 }
+export enum BristolInteraction {
+    tap, 
+    doubleTap, 
+    holdStart,
+    holdEnd,
+}
+export interface BristolCursorEvent {
+    type: 'mouse' | 'touch'
+    get center(): [x: number, y: number]
+}
+
+export interface BristolMouseEvent extends BristolCursorEvent {
+    type: 'mouse',
+    buttons: [false | BristolInteraction, false | BristolInteraction, false | BristolInteraction]
+}
+export interface BristolTouchEvent extends BristolCursorEvent {
+    type: 'touch',
+    locations: Array<[x: number, y: number, interaction: BristolInteraction]>
+}
+
 export enum InputEventAction {
     Down, Up
 }
@@ -31,6 +50,7 @@ export class MouseInputEvent implements BristolInputEvent {
         this.x = x;
         this.y = y;
     }
+    
 }
 export class MouseBtnInputEvent extends MouseInputEvent {
     btn: number;

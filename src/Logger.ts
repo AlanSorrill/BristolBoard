@@ -175,6 +175,7 @@ export class Logger {
 export class LocalLogger {
     allowBelowLvl(lvl: LogLevel) {
         this.parent.allowBelowLvl(this.subject, lvl);
+        return this;
     }
 
 

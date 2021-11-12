@@ -4,6 +4,7 @@ declare global {
 
     interface String {
         replaceAll(a: string, b: string): string;
+        replaceAt(index: number, textToInsert: string): string;
     }
     interface Map<K, V> {
         toArray(): V[]
@@ -26,6 +27,9 @@ export function IsType<T>(target: any, memberName: string): target is T {
 export type optFunc<T> = (T | (() => T)) | { t: string, v: optFunc<T> };
 export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTransform<I, O> };
 
+String.prototype.replaceAt = function(index: number, textToInsert: string) {
+    return this.substr(0, index) + textToInsert + this.substr(index + textToInsert.length);
+}
 Map.prototype.toArray = function <K, V>() {
     let out: V[] = [];
     (this as Map<K, V>).forEach((val: V, key: K) => {

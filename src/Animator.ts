@@ -146,7 +146,26 @@ export class Interp<T> {
   
 }
 
+export function smoothFloat(inputValue: ()=>number, velocityPerSecond: optFunc<number> = 1.0){
+    let lastTime = Date.now();
+    let currentTime = lastTime;
+    let previousValue: number = inputValue();
+    let timeDelta: number;
+    let valueDelta: number;
+    let maxValueDelta: number;
+    let sign: number = 1;
+    return ()=>{
+        currentTime = Date.now();
+        timeDelta = (currentTime - lastTime) / 1000.0;
+        valueDelta = inputValue() - previousValue;
+        sign = valueDelta >= 0 ? 1 : -1;
+        maxValueDelta = evalOptionalFunc(velocityPerSecond) * timeDelta;
 
+        valueDelta = Math.min(Math.abs(valueDelta),maxValueDelta) * sign;
+        previousValue += valueDelta;
+        return previousValue;
+    }
+}
 export function interpFunc<T>(a: optFunc<T>, b: optFunc<T>, target: optFunc<InterpEnd>, options: InterpOptions<T> & InterpMethod<T>): () => T {
     let interper = new Interp<T>(a, b, target, options);
     return () => interper.getValue();

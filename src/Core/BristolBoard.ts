@@ -87,7 +87,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         window.addEventListener("orientationchange", function (event) {
             console.log("The orientation of the screen is: ", screen.orientation);
             ths.refreshOrientation();
-            let isGlitched = () => (ths.orientation == DeviceOrientation.landscape && ths.width < ths.height) || (ths.orientation == DeviceOrientation.portrait && ths.width > ths.height)
+            let isGlitched = () => (ths.orientation == DeviceOrientation.landscape && ths.getWidth() < ths.getHeight()) || (ths.orientation == DeviceOrientation.portrait && ths.getWidth() > ths.getHeight())
             let fixGlitches = () => {
                 if (isGlitched()) {
                     console.log("GLITCHED!!!")
@@ -413,7 +413,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         return window.devicePixelRatio;
     }
     minTouchSize() {
-        return Math.min(this.width, this.height) / 6;
+        return Math.min(this.getWidth(), this.getHeight()) / 6;
     }
     private lastScrollOffset: [number, number] = [0, 0];
     private scrollDeltaY: number = 0;
@@ -472,10 +472,10 @@ export class BristolBoard<RootElementType extends UIElement> {
         return false;
     }
     autoFrames: boolean = true;
-    get width() {
+    getWidth() {
         return this.iWidth * this.resolutionScale;
     }
-    get height() {
+    getHeight() {
         return this.iHeight * this.resolutionScale;
     }
     private iWidth: number;
@@ -674,7 +674,7 @@ export class BristolBoard<RootElementType extends UIElement> {
     background(color: FColor) {
         this.noStroke();
         this.fillColor(color);
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.fillRect(0, 0, this.getWidth(), this.getHeight());
     }
     line(x1: number, y1: number, x2: number, y2: number) {
         this.ctx.beginPath();
@@ -829,7 +829,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         let ths = this;
         this.noStroke();
         this.fillColor(fColor.grey.darken3);
-        this.ctx.fillRect(0, 0, this.width, this.height);
+        this.ctx.fillRect(0, 0, this.getWidth(), this.getHeight());
 
         //this.targetFps = Interp.highFPSRequests > 0 ? 60 : 20;
         this.manageHighFpsRequests();

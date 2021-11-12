@@ -85,49 +85,49 @@ export abstract class UIElement {
     abstract onDrawBackground(frame: UIFrameResult, deltaTime: number): void
     abstract onDrawForeground(frame: UIFrameResult, deltaTime: number): void
 
-    get left() {
+    getLeft() {
         if (this.frame.result != null) {
             return this.frame.result.left;
         }
         return this.frame.leftX();
     }
-    get right() {
+    getRight() {
         if (this.frame.result != null) {
             return this.frame.result.right;
         }
         return this.frame.rightX();
     }
-    get top() {
+    getTop() {
         if (this.frame.result != null) {
             return this.frame.result.top;
         }
         return this.frame.topY();
     }
-    get bottom() {
+    getBottom() {
         if (this.frame.result != null) {
             return this.frame.result.bottom;
         }
         return this.frame.result.bottom;
     }
-    get centerX() {
+    getCenterX() {
         if (this.frame.result != null) {
             return this.frame.result.centerX;
         }
         return this.frame.centerX();
     }
-    get centerY() {
+    getCenterY() {
         if (this.frame.result != null) {
             return this.frame.result.centerY;
         }
         return this.frame.centerY();
     }
-    get width() {
+    getWidth() {
         if (this.frame.result != null) {
             return this.frame.result.width;
         }
         return this.frame.measureWidth();
     }
-    get height() {
+    getHeight() {
         if (this.frame.result != null) {
             return this.frame.result.height;
         }
@@ -173,7 +173,7 @@ export abstract class UIElement {
     addOnAttachToBristolListener(listener: () => void) {
         if (this.isAttachedToBristol) {
             listener();
-        } else {
+        } else { 
             if (this.parent != null) {
                 (this.parent as UIElement).addOnAttachToBristolListener(listener);
             } else {

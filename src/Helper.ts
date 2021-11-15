@@ -8,6 +8,7 @@ declare global {
     }
     interface Map<K, V> {
         toArray(): V[]
+        toArrayWithKeys(): Array<[key: K,value: V]>
     }
     interface Array<T> {
         pushAll(arr: T[]): void;
@@ -34,6 +35,13 @@ Map.prototype.toArray = function <K, V>() {
     let out: V[] = [];
     (this as Map<K, V>).forEach((val: V, key: K) => {
         out.push(val);
+    })
+    return out;
+}
+Map.prototype.toArrayWithKeys = function <K, V>() {
+    let out: Array<[key: K,value: V]> = [];
+    (this as Map<K, V>).forEach((val: V, key: K) => {
+        out.push([key,val]);
     })
     return out;
 }

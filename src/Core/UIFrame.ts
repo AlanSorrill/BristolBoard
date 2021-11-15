@@ -103,6 +103,7 @@ export abstract class UIFrame {
     measureHeight(): number {
         return this.bottomY() - this.topY();
     }
+    
     public static Build<DescriptionType extends UIFrameDescription>(description: DescriptionType | UIFrame, parent: UIFrame = null) {
 
         if (description instanceof UIFrame) {

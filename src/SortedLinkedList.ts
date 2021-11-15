@@ -32,7 +32,48 @@ export class SortedLinkedList<T> {
             }
         })
     }
+    ensureOrder(node: SortedLinkedListNode<T> = null) {
+        if (node == null) {
+            //ensure order on head
+            if (this.head != null && this.head.next != null) {
+                if (this.comparator(this.head.value, this.head.next.value) < 0) {
+                    let nodes: [SortedLinkedListNode<T>, SortedLinkedListNode<T>, SortedLinkedListNode<T>] = [this.head, this.head.next, this.head.next.next]
+                    this.head = nodes[1];
+                    this.head.next = nodes[0];
+                    this.head.next.next = nodes[2];
+                }
+            }
+        } else {
+            if (node.next != null) {
+                if (this.comparator(node.value, node.next.value) < 0) {
+                    this.moveForward(node);
+                }
+            }
+        }
+    }
+    private moveForward(node: SortedLinkedListNode<T>) {
+        console.log(`Moving node forward ${node.value}`)
+        if (node == null) {
+            return;
+        }
+        if (node.next == null) {
+            return;
+        }
+        let nodes: [lastNode: SortedLinkedListNode<T>, thisNode: SortedLinkedListNode<T>, nextNode: SortedLinkedListNode<T>, nextNextNode: SortedLinkedListNode<T>] = [node.last, node, node.next, node.next.next];
+        //cut thisNode out
+        if (nodes[0] != null) {
+            nodes[0].next = nodes[2];
+        }
+        nodes[2].last = nodes[0];
+        //put it after next node
+        nodes[2].next = nodes[1];
+        if (nodes[3] != null) {
+            nodes[3].last = nodes[1];
+        }
 
+        nodes[1].last = nodes[2];
+        nodes[1].next = nodes[3];
+    }
     add(value: T) {
         this.count++;
         if (this.head == null) {
@@ -117,16 +158,30 @@ export class SortedLinkedList<T> {
     }
 
     //return true to break
-    forEach(callback: (value: T, index: number) => (void | boolean)) {
+    forEach(callback: (value: T, index: number) => (void | boolean), fixOrder: boolean = true) {
         let n = this.head;
         let i = 0;
-        while (n != null) {
-            if (callback(n.value, i) == true) {
-                break;
+        if (fixOrder) {
+            this.ensureOrder();
+            while (n != null) {
+                this.ensureOrder(n);
+                if (callback(n.value, i) == true) {
+                    break;
+                }
+                i++;
+                n = n.next;
             }
-            i++;
-            n = n.next;
+        } else {
+            while (n != null) {
+                if (callback(n.value, i) == true) {
+                    break;
+                }
+                i++;
+                n = n.next;
+            }
         }
+
+
     }
     //return true to break
     forEachReverse(callback: (value: T) => (void | boolean)) {
@@ -139,7 +194,13 @@ export class SortedLinkedList<T> {
         }
     }
 
-
+    toArray(): T[] {
+        let out: T[] = [];
+        this.forEach((value: T) => {
+            out.push(value);
+        })
+        return out;
+    }
 
     private constructor(comparator: (a: T, b: T) => number) {
         this.comparator = comparator;

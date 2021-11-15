@@ -1,12 +1,12 @@
-import { BristolFontFamily, BristolHAlign, BristolVAlign, FColor } from '..';
-import { UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
 
+import { FColor, logger, UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
+let log = logger.local('UIElement')
 
 export abstract class UIElement {
 
     id: string;
     parent: UIElement | BristolBoard<any> = null;
-    childElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
+    childElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (b.depth - a.depth));
 
     zOffset: number = 0;
     frame: UIFrame;
@@ -70,6 +70,11 @@ export abstract class UIElement {
 
     draw(deltaTime: number) {
         let frame = this.frame.result;
+        if (frame == null) {
+            log.error(`${this.id} was unmeasured`);
+            this.measure(deltaTime)
+            return;
+        }
         this.onDrawBackground(frame, deltaTime);
 
         this.forEachVisibleChild((elem: UIElement) => {
@@ -173,7 +178,7 @@ export abstract class UIElement {
     addOnAttachToBristolListener(listener: () => void) {
         if (this.isAttachedToBristol) {
             listener();
-        } else { 
+        } else {
             if (this.parent != null) {
                 (this.parent as UIElement).addOnAttachToBristolListener(listener);
             } else {

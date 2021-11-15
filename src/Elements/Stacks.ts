@@ -65,11 +65,15 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         let rowCount = () => {
             return Math.ceil(data.length / options.cols)
         }
+        let noScrollX = false;
         if (typeof options.columnWidth == 'undefined') {
-            options.columnWidth = (col: number) => (frame.result.width / options.cols)
+            noScrollX = true;
+            options.columnWidth = (col: number) => (frame.result?.width / options.cols)
         }
+        let noScrollY = false;
         if (typeof options.rowHeight == 'undefined') {
-            options.rowHeight = (row: number) => (frame.result.height / rowCount());
+            noScrollY = true;
+            options.rowHeight = (row: number) => (frame.result?.height / rowCount());
         }
         let out: (UIStackRecycler<DataType, ViewType> & { data: DataType[] }) = UIStackRecycler.create<DataType[], RowView>(UIStackRecycler.SourceFromArray(data.toSubArrays(options.cols)), {
             isVertical: true,
@@ -146,6 +150,20 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         //childElement.onAddToParent();
         this.options.bindData(this.rootIndex, this.source.get(0), this.rootElement.child);
     }
+    scrollToIndex(targetIndex: number, timeMs: number) {
+        if (targetIndex < 0 || targetIndex >= this.source.count()) {
+            return;
+        }
+        let startTime = Date.now();
+        while (true) {
+            let now = Date.now();
+            if (now - startTime > timeMs) {
+
+                return;
+            }
+
+        }
+    }
     get overscrollBehavior(): OverScrollBehavior {
         if (typeof this.options.overscroll == 'undefined') {
             return OverScrollBehavior.hard
@@ -183,6 +201,10 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     }
     addScroll(amount: number) {
         this.rootOffset += amount;
+        this.fixOffsetOverflow();
+
+    }
+    private fixOffsetOverflow() {
         let endCap = this.endCap;
         if (this.rootIndex == 0 && this.rootOffset > 0) {
             switch (this.overscrollBehavior) {
@@ -346,6 +368,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     forEachVisibleChild(onEach: (elem: UIStackChildContainer<DataType, ChildType>, index: number) => (void | boolean)) {
         let elem = this.rootElement;
         let index = this.rootIndex;
+        this.fixOffsetOverflow()
         while (elem != null) {
             if (onEach(elem, index) === false) {
                 break;
@@ -418,24 +441,28 @@ export class UIStackChildContainer<DataType, ChildType extends UIElement> extend
                             return 0;//ths.last.frame.description.y
                         }
                         return 0;
-                    }, width: () => ths.getWidth(), height: () => parent.options.childLength(ths.index)
+                    }, width: () => parent.getWidth(), height: () => parent.options.childLength(ths.index)
                 })
 
                 return out;
             } else {
                 let out = UIFrame.Build({
+                    itsMe: true,
                     x: () => {
                         if (ths.last != null) {
                             return 0;//ths.last.frame.description.y
                         }
                         return 0;
                     }, y: 0,
-                    width: () => {
+                    height: () => {
                         console.log('tst')
-                        let w = ths.getWidth();
-                        return w;
+                        if (ths.frame.description['itsMe'] === true) {
+                            return 10;
+                        }
+                        let h = ths.getHeight();
+                        return h;
                     },
-                    height: () => parent.options.childLength(ths.index)
+                    width: () => parent.options.childLength(ths.index)
                 })
 
                 return out;

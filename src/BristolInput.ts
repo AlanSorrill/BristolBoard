@@ -2,8 +2,8 @@
 export interface BristolInputEvent {
 }
 export enum BristolInteraction {
-    tap, 
-    doubleTap, 
+    tap,
+    doubleTap,
     holdStart,
     holdEnd,
 }
@@ -24,10 +24,151 @@ export interface BristolTouchEvent extends BristolCursorEvent {
 export enum InputEventAction {
     Down, Up
 }
+export enum UppercaseEnglishLetterCharacter {
+    A = 'A',
+    B = 'B',
+    C = 'C',
+    D = 'D',
+    E = 'E',
+    F = 'F',
+    G = 'G',
+    H = 'H',
+    I = 'I',
+    J = 'J',
+    K = 'K',
+    L = 'L',
+    M = 'M',
+    N = 'N',
+    O = 'O',
+    P = 'P',
+    Q = 'Q',
+    R = 'R',
+    S = 'S',
+    T = 'T',
+    U = 'U',
+    V = 'V',
+    W = 'W',
+    X = 'X',
+    Y = 'Y',
+    Z = 'Z'
+}
+export function isUppercaseEnglishLetterCharacter(input: string): input is UppercaseEnglishLetterCharacter {
+    return typeof UppercaseEnglishLetterCharacter[input] != 'undefined';
+}
+export enum LowercaseEnglishLetterCharacter {
+    a = 'a',
+    b = 'b',
+    c = 'c',
+    d = 'd',
+    e = 'e',
+    f = 'f',
+    g = 'g',
+    h = 'h',
+    i = 'i',
+    j = 'j',
+    k = 'k',
+    l = 'l',
+    m = 'm',
+    n = 'n',
+    o = 'o',
+    p = 'p',
+    q = 'q',
+    r = 'r',
+    s = 's',
+    t = 't',
+    u = 'u',
+    v = 'v',
+    w = 'w',
+    x = 'x',
+    y = 'y',
+    z = 'z'
+}
+export function isLowercaseEnglishLetterCharacter(input: string): input is LowercaseEnglishLetterCharacter {
+    return typeof LowercaseEnglishLetterCharacter[input] != 'undefined';
+}
+export enum NumericCharacter {
+    One = "1",
+    Two = "2",
+    Three = "3",
+    Four = "4",
+    Five = "5",
+    Six = "6",
+    Seven = "7",
+    Eight = "8",
+    Nine = "9",
+    Zero = "0",
+}
+export function isNumericCharacter(input: string): input is NumericCharacter {
+    return typeof NumericCharacter[input] != 'undefined';
+}
+export enum MathCharacter {
+    Minus = "-",
+    Equals = "=",
+    Multiply = "*",
+    Add = "+",
+    Divide = "/",
+    GreaterThen = ">",
+    LessThen = "<"
+}
+export function isMathCharacter(input: string): input is MathCharacter {
+    return typeof MathCharacter[input] != 'undefined';
+}
+export enum PunctuationCharacter {
+    BackTick = "`",
+    SemiColon = ";",
+    SingleQuote = "\'",
+    DoubleQuote = "\"",
+    Comma = ",",
+    Period = ".",
+}
+export function isPunctuationCharacter(input: string): input is PunctuationCharacter {
+    return typeof PunctuationCharacter[input] != 'undefined';
+}
+export enum BracketCharacter {
+    OpenSquareBracket = "[",
+    CloseSquareBracket = "]",
+    OpenCurlyBracket = "{",
+    CloseCurlyBracket = "}",
+    OpenParenthasis = "(",
+    CloseParenthasis = ")"
+}
+export function isBracketCharacter(input: string): input is BracketCharacter {
+    return typeof BracketCharacter[input] != 'undefined';
+}
+export enum SpecialKey {
+    BackSpace = "Backspace",
+    Tab = "Tab",
+    BackSlash = "\\",
+    CapsLock = "CapsLock",
 
-export enum KeyboardInputKey {
-    a = 'a', b = 'b', c = 'c', d = 'd', e = 'e', f = 'f', g = 'g', h = 'h', i = 'i', j = 'j', k = 'k', l = 'l', m = 'm', n = 'n', o = '0', p = 'p',
-    q = 'q', r = 'r', s = 's', t = 't', u = 'u', v = 'v', w = 'w', x = 'x', y = 'y', z = 'z', shift = 'shift', enter = 'enter', ctrl = 'ctrl', alt = 'alt'
+
+    Enter = "Enter",
+    Shift = "Shift",
+
+
+    Control = "Control",
+    Meta = "Meta",
+    Alt = "Alt",
+    ContextMenu = "ContextMenu",
+    Insert = "Insert",
+    Delete = "Delete",
+    Numlock = "NumLock",
+}
+export function isSpecialKey(input: string): input is SpecialKey {
+    return typeof SpecialKey[input] != 'undefined';
+}
+export type KeyboardKey = UppercaseEnglishLetterCharacter | LowercaseEnglishLetterCharacter | NumericCharacter | MathCharacter | PunctuationCharacter | BracketCharacter | SpecialKey
+
+
+export function StringToKeyboardInputKey(str: string): KeyboardKey | null {
+    if (isSpecialKey(str) || isUppercaseEnglishLetterCharacter(str) || isLowercaseEnglishLetterCharacter(str) || isNumericCharacter(str) || isMathCharacter(str) || isPunctuationCharacter(str) || isBracketCharacter(str)) {
+        return str;
+    }
+    switch (str) {
+        case PunctuationCharacter.BackTick:
+            return str;
+    }
+    return null;
 }
 export class KeyboardInputEvent implements BristolInputEvent {
     key: string
@@ -50,7 +191,13 @@ export class MouseInputEvent implements BristolInputEvent {
         this.x = x;
         this.y = y;
     }
-    
+
+}
+export enum TapTuple {
+    "Single", "Double", "Tripple"
+}
+export class TapInputEvent extends MouseInputEvent {
+    count: TapTuple
 }
 export class MouseBtnInputEvent extends MouseInputEvent {
     btn: number;

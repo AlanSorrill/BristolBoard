@@ -1,14 +1,18 @@
 
+import { PunctuationCharacter, StringToKeyboardInputKey } from "..";
 import {
     BristolFontStyle, BristolFontWeight, BristolFontFamily, BristolHAlign, BristolVAlign, LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML,
-    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, KeyboardInputKey, MouseBtnInputEvent, MouseDraggedInputEvent, MouseMovedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, BristolCursor, Interp
+    UIElement, FGesture, Coordinate, MouseDragListener, MouseBtnListener, MouseMovementListener, InputEventAction, SpecialKey, MouseBtnInputEvent, MouseDraggedInputEvent, MouseMovedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, BristolCursor, Interp, KeyboardKey
 } from "../BristolImports";
 
 
 let log = logger.local('BristolBoard');
 log.allowBelowLvl(LogLevel.debug);
 
-
+export interface DebugFlags {
+    debugUIFrame: boolean
+}
+export type DebugFlagListener = (key: keyof DebugFlags) => void;
 export class BristolBoard<RootElementType extends UIElement> {
 
     containerDiv: FHTML<HTMLDivElement>;
@@ -18,26 +22,38 @@ export class BristolBoard<RootElementType extends UIElement> {
     ctx: CanvasRenderingContext2D;
     mouseBtnsPressed: [boolean, boolean, boolean] = [false, false, false]
     // jobExecutor: JobExecutor = null;
-    keyboardState: Map<string, boolean> = new Map()
+    //keyboardState: Map<string, boolean> = new Map()
     deviceType: DeviceType;
     orientation: DeviceOrientation
     gesture: FGesture;
     fullscreenOnTouch: boolean = true;
-    isKeyPressed(key: KeyboardInputKey): boolean {
-        return this.keyboardState.get(key) || false;
+    isKeyPressed(key: KeyboardKey): boolean{
+        if(!this._pressedKeys.has(key)){
+            return false;
+        }
+        return this._pressedKeys.get(key);
     }
     dragLockElement: (UIElement & MouseDragListener) = null;
     mouseOverElement: (UIElement & MouseMovementListener) = null;
-    debuggerFlags: {
-        debugUIFrame: boolean
-    } = {
-            debugUIFrame: false
-        }
+    debuggerFlags: DebugFlags
+    private debuggerFlagListeners: Array<DebugFlagListener> = []
 
 
     constructor(containerDivElem: HTMLDivElement, buildRootElement: (brist: BristolBoard<RootElementType>) => Promise<RootElementType>) {
-        this.deviceType = BristolBoard.getDeviceType();
+
         let ths = this;
+        this.debuggerFlags = new Proxy({
+            debugUIFrame: false
+        }, {
+            set(target: DebugFlags, p: keyof DebugFlags, value: any, receiver: any): boolean {
+                target[p] = value;
+                ths.debuggerFlagListeners.forEach((listener: DebugFlagListener) => {
+                    listener(p);
+                })
+                return true;
+            }
+        })
+        this.deviceType = BristolBoard.getDeviceType();
         //this.uiElements = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
         this.containerDiv = new FHTML(containerDivElem);
 
@@ -377,6 +393,20 @@ export class BristolBoard<RootElementType extends UIElement> {
                 }
             }
         });
+        document.addEventListener('keydown', (ev: KeyboardEvent) => {
+            console.log(ev.key)
+            let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
+            this._pressedKeys.set(key, true);
+            if(key == PunctuationCharacter.BackTick){
+                console.log(`Saving ${ths.debugElem?.id} to bookmarks`);
+                ths.debugElementBookmarks.push(ths.debugElem)
+            }
+        })
+        document.addEventListener('keyup', (ev: KeyboardEvent) => {
+            console.log(ev.key)
+            let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
+            this._pressedKeys.set(key, false);
+        })
         // this.canvas.on('keydown', (event: JQuery.KeyDownEvent<HTMLCanvasElement, null, HTMLCanvasElement, HTMLCanvasElement>)=>{
         //     return ths.keyDown(event);
         // })
@@ -392,8 +422,12 @@ export class BristolBoard<RootElementType extends UIElement> {
         })
 
     }
-
+    getKeys() {
+        return this._pressedKeys.toArrayWithKeys();
+    }
+    private _pressedKeys: Map<KeyboardKey, boolean> = new Map();
     rootElement: RootElementType = null;
+    
     // mousePressed(evt: MouseBtnInputEvent) {
     //     return this.rootElement.mousePressed(evt);
     // }
@@ -409,6 +443,9 @@ export class BristolBoard<RootElementType extends UIElement> {
     // keyDown(event: KeyboardInputEvent): boolean {
     //     return false;
     // }
+    addOnDebuggerFlagListener(listener: DebugFlagListener) {
+        this.debuggerFlagListeners.push(listener);
+    }
     pixelDensity(): number {
         return window.devicePixelRatio;
     }
@@ -824,7 +861,8 @@ export class BristolBoard<RootElementType extends UIElement> {
         }
         current[1] = [lock, null];
     }
-
+    debugElementBookmarks: UIElement[] = [];
+    debugElem: UIElement = null;
     onDraw(deltaMs: number): void {
         let ths = this;
         this.noStroke();
@@ -838,13 +876,17 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.rootElement?.draw(deltaMs);
 
         if (this.debuggerFlags.debugUIFrame && this.rootElement != null) {
-            this.rootElement.drawUIFrame(true, 1);
-            let debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last
-            if (debugElem != null) {
-                this.fillColor(debugElem.debugFrameColor);
+            
+            this.debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last
+            if(this.debugElem == null){
+                this.debugElem = this.rootElement;
+            }
+            this.debugElem.drawUIFrame(true, 3);
+            if (this.debugElem != null) {
+                this.fillColor(this.debugElem.debugFrameColor);
                 this.textAlign(BristolHAlign.Left, BristolVAlign.Bottom);
                 this.textSize(12);
-                this.ctx.fillText(debugElem?.id, this.mouseX, this.mouseY)
+                this.ctx.fillText(this.debugElem?.id, this.mouseX, this.mouseY)
             }
         }
     }

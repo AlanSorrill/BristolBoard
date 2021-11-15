@@ -10,6 +10,7 @@ import {
 
 export class UIButton extends UIElement implements MouseMovementListener, MouseBtnListener {
     static uidCount = 0;
+    frame: UIFrame_CornerWidthHeight
     paddingVertical: optFunc<number> = 32;
     paddingHorizontal: optFunc<number> = 64;
     text: optFunc<string>;
@@ -52,6 +53,7 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
         let color = evalOptionalTransfrom(this.backgroundColor, this.mouseState);
         if (color != null) {
             this.brist.fillColor(color);
+            this.brist.ctx.beginPath();
             this.brist.rectFrame(frame, false, true);
             this.brist.ctx.beginPath();
         }

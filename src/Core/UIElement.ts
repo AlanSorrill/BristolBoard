@@ -1,5 +1,6 @@
 
-import { FColor, logger, UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseBtnInputEvent, MouseDraggedInputEvent, MouseInputEvent, MouseMovedInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, MousePinchedInputEvent, IsType } from '../BristolImports'
+import { InteractionEventWatcher } from '..';
+import { FColor, logger, UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, IsType, RawPointerMoveData, RawPointerData } from '../BristolImports'
 let log = logger.local('UIElement')
 
 export abstract class UIElement {
@@ -36,7 +37,27 @@ export abstract class UIElement {
         }
     }
 
+    get mouseState(): MouseState {
+        let downIndicies: number[] = [];
+        let hover: boolean = false;
+        for (let i = 0; i < this.brist.interactionEvents.length; i++) {
+            if (this.brist.interactionEvents[i] != null) {
+                let watcher: InteractionEventWatcher = this.brist.interactionEvents[i]
+                if (watcher.isDown) {
+                    downIndicies.push(i);
+                }
+                if (this.frame.containsPoint(watcher.lastEvent.position[0], watcher.lastEvent.position[1])) {
+                    hover = true;
+                }
 
+            }
+        }
+        if(downIndicies.length > 0){
+            return downIndicies;
+        }
+        return hover ? 'Hover' : 'Gone'
+
+    }
 
     get isAttachedToBristol() {
         if (this.parent instanceof BristolBoard) {
@@ -142,8 +163,9 @@ export abstract class UIElement {
     containsPoint(x: number, y: number) {
         return this.frame.containsPoint(x, y);
     }
+    dragLockCount: number = 0
     get isDragLocked() {
-        return this.brist.dragLockElement?.id == this.id;
+        return this.dragLockCount > 0;
     }
 
 
@@ -284,21 +306,17 @@ export abstract class UIElement {
         return `${name}${this.idCounter++}`
     }
 }
-export enum MouseState {
-    Gone,
-    Over,
-    Pressed
-}
+export type MouseState = 'Hover' | 'Gone' | number[]
 export interface MouseMovementListener {
     mouseEnter(evt: MouseInputEvent): boolean
     mouseExit(evt: MouseInputEvent): boolean
-    mouseMoved(evt: MouseMovedInputEvent): boolean
+    mouseMoved(evt: RawPointerMoveData): boolean
 }
 export interface MouseDragListener {
-    shouldDragLock(event: MouseBtnInputEvent): boolean
-    mouseDragged(evt: MouseDraggedInputEvent): boolean
-    mousePinched(evt: MousePinchedInputEvent): boolean
-    onDragEnd(event: MouseBtnInputEvent | MouseDraggedInputEvent): boolean
+    shouldDragLock(event: RawPointerData | [start: RawPointerData, lastMove: RawPointerMoveData]): boolean
+    mouseDragged(evt: RawPointerMoveData): boolean
+
+    onDragEnd(event: RawPointerData | RawPointerMoveData): boolean
 }
 export interface KeyListener {
     keyPressed(evt: KeyboardInputEvent): boolean
@@ -308,6 +326,7 @@ export interface MouseWheelListener {
     mouseWheel(delta: MouseScrolledInputEvent): boolean
 }
 export interface MouseBtnListener {
-    mousePressed(evt: MouseBtnInputEvent): boolean
-    mouseReleased(evt: MouseBtnInputEvent): boolean
+    mousePressed(evt: RawPointerData): boolean
+    mouseReleased(evt: { start: RawPointerData, end: RawPointerData, timeDown: number }): boolean
+
 }

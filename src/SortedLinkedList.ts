@@ -240,3 +240,21 @@ export class SortedLinkedListNode<T> {
         this.last = last;
     }
 }
+
+export type LinkedTuple<T> = [T, null | LinkedTuple<T>]
+
+//return false to break loop
+export function ForEachLinkedTuple<T>(linkedTuple: LinkedTuple<T>, callback: (value: T, depth: number)=>(void | false)){
+    let tmp = linkedTuple
+    let depth = 0;
+    while(tmp != null){
+        if(callback(tmp[0], depth) === false){
+            break;
+        }
+        depth++;
+        tmp = tmp[1];
+    }
+}
+export function CreateLinkedTuple<T>(initialValue: T): LinkedTuple<T>{
+    return [initialValue, null]
+}

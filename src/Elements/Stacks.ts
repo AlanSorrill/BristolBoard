@@ -1,6 +1,6 @@
 
-import { isNumber, MouseWheelListener } from '..';
-import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseBtnInputEvent, MouseDraggedInputEvent, MouseDragListener, MousePinchedInputEvent, UIFrame, logger } from '../BristolImports'
+import { isNumber, MouseWheelListener, RawPointerData, RawPointerMoveData } from '..';
+import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseDragListener, UIFrame, logger } from '../BristolImports'
 import { MouseScrolledInputEvent } from '../BristolInput';
 let log = logger.local('UIStack');
 log.allowBelowLvl(LogLevel.naughty)
@@ -170,21 +170,19 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         }
         return this.options.overscroll;
     }
-    shouldDragLock(event: MouseBtnInputEvent): boolean {
+    shouldDragLock(event: RawPointerData | [start: RawPointerData, lastMove: RawPointerMoveData]): boolean {
         return true;
     }
-    mouseDragged(evt: MouseDraggedInputEvent): boolean {
+    mouseDragged(evt: RawPointerMoveData): boolean {
         if (this.options.isVertical) {
-            this.addScroll(evt.deltaY);
+            this.addScroll(evt.delta[1]);
         } else {
-            this.addScroll(evt.deltaX);
+            this.addScroll(evt.delta[0]);
         }
         return true;
     }
-    mousePinched(evt: MousePinchedInputEvent): boolean {
-        return false;
-    }
-    onDragEnd(event: MouseBtnInputEvent): boolean {
+
+    onDragEnd(event: RawPointerData | [start: RawPointerData, lastMove: RawPointerMoveData]): boolean {
         return true;
     }
     mouseWheel(event: MouseScrolledInputEvent): boolean {
@@ -204,8 +202,16 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
         this.fixOffsetOverflow();
 
     }
-    private fixOffsetOverflow() {
+    private fixOffsetOverflow(maxRecursions = 2) {
         let endCap = this.endCap;
+
+        while (endCap != null && endCap.getHeight() == 0) {
+            endCap = endCap.last;
+        }
+        if (endCap == null) {
+            log.error(`No entries with height`);
+            return;
+        }
         if (this.rootIndex == 0 && this.rootOffset > 0) {
             switch (this.overscrollBehavior) {
                 default:
@@ -214,7 +220,8 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                     this.rootOffset = 0;
 
             }
-        } else if (endCap.frame.result.bottom < this.frame.result.bottom && endCap.index == this.source.count() - 1) {
+           
+        } else if (endCap.frame.result.bottom < this.frame.result.bottom) {
             switch (this.overscrollBehavior) {
                 default:
                     log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)
@@ -225,6 +232,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                         this.rootOffset += this.frame.result.right - endCap.frame.result.right;
                     }
             }
+          
         }
     }
 

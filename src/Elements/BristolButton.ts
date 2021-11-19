@@ -1,14 +1,16 @@
 
+import { RawPointerData } from "..";
 import {
-    MouseDraggedInputEvent, MousePinchedInputEvent, MouseScrolledInputEvent, KeyboardInputEvent,
+ MouseScrolledInputEvent, KeyboardInputEvent,
     MouseBtnListener, MouseMovementListener,
     evalOptionalFunc, optFunc, UIFrameDescription_CornerWidthHeight,
     BristolFontFamily, BristolHAlign, BristolVAlign, UIElement, UIFrameResult,
-    UIFrame_CornerWidthHeight, BristolBoard, FColor, optTransform, MouseState, evalOptionalTransfrom, MouseBtnInputEvent, MouseInputEvent, fColor
+    UIFrame_CornerWidthHeight, BristolBoard, FColor, optTransform, MouseState, evalOptionalTransfrom,  MouseInputEvent, fColor
 } from "../BristolImports";
+import { RawPointerMoveData } from "../BristolInput";
 
 
-export class UIButton extends UIElement implements MouseMovementListener, MouseBtnListener {
+export class UIButton extends UIElement implements  MouseBtnListener {
     static uidCount = 0;
     frame: UIFrame_CornerWidthHeight
     paddingVertical: optFunc<number> = 32;
@@ -19,12 +21,13 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
     backgroundColor: optTransform<MouseState, FColor> = fColor.red.base;
     foregroundColor: optTransform<MouseState, FColor> = fColor.white;
     onClick: () => void;
-    mouseState: MouseState = MouseState.Gone;
+    
     constructor(text: optFunc<string>, onClick: () => void, uiFrame: UIFrame_CornerWidthHeight | UIFrameDescription_CornerWidthHeight, brist: BristolBoard<any>) {
         super(`btn${UIButton.uidCount++}`, uiFrame, brist);
         this.onClick = onClick;
         this.text = text;
     }
+ 
 
     autoPadding(heightToTextSize: number = 0.25, widthToTextSize: number = 0.6) {
         let textSize = evalOptionalFunc(this.textSize, 24);
@@ -70,27 +73,25 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseB
         this.brist.text(evalOptionalFunc(this.text), frame.centerX, frame.centerY);
     }
 
-    mouseMoved(event: MouseInputEvent) {
+   
+    mousePressed(evt: RawPointerData) {
+       // this.mouseState = MouseState.Pressed;
         return true;
     }
-    mousePressed(evt: MouseBtnInputEvent) {
-        this.mouseState = MouseState.Pressed;
+    mouseReleased(evt: { start: RawPointerData; end: RawPointerData; timeDown: number; }) {
+      //  this.mouseState = this.isMouseTarget ? MouseState.Over : MouseState.Gone;
         this.onClick();
         return true;
     }
-    mouseReleased(evt: MouseBtnInputEvent) {
-        this.mouseState = this.isMouseTarget ? MouseState.Over : MouseState.Gone;
-        return true;
-    }
     
-    mouseEnter(evt: MouseInputEvent) {
-        this.mouseState = MouseState.Over;
-        return true;
-    }
-    mouseExit(evt: MouseInputEvent) {
-        this.mouseState = MouseState.Gone;
-        return true;
-    }
+    // mouseEnter(evt: MouseInputEvent) {
+    //     this.mouseState = MouseState.Over;
+    //     return true;
+    // }
+    // mouseExit(evt: MouseInputEvent) {
+    //     this.mouseState = MouseState.Gone;
+    //     return true;
+    // }
 
     mouseWheel(delta: MouseScrolledInputEvent): boolean {
         return false;

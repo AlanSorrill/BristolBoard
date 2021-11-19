@@ -5,14 +5,13 @@ export interface TouchPoint extends Touch {
 }
 export type Coordinate = { x: number, y: number }
 export interface FGesture_Listeners {
-    onTouchStart: (pos: Coordinate) => void
-    onTouchEnd: (pos: Coordinate) => void
-    onDrag: (position: Coordinate, delta: Coordinate) => void
-    onPinch: (position: Coordinate, dragDelta: Coordinate, pinchDelta: Coordinate) => void
+    onTouchStart: (index: number,pos: Coordinate) => void
+    onTouchEnd: (index: number,pos: Coordinate) => void
+    onDrag: (index: number,position: Coordinate, delta: Coordinate) => void
 }
 export class FGesture {
     element: FHTML<any>;
-    touchPoints: [TouchPoint, TouchPoint] = [null, null]
+    touchPoints: TouchPoint[] = [null,null,null,null]
     listeners: FGesture_Listeners;
     constructor(element: FHTML<any>, listeners: FGesture_Listeners) {
         this.element = element
@@ -28,7 +27,7 @@ export class FGesture {
                         y: 0
                     }
                    // console.log(`Starting touch point ${ev.changedTouches[i].identifier}`, ths.touchPoints[ev.changedTouches[i].identifier])
-                    ths.listeners.onTouchStart({x: ths.touchPoints[ev.changedTouches[i].identifier].clientX, y: ths.touchPoints[ev.changedTouches[i].identifier].clientY})
+                    ths.listeners.onTouchStart(ev.changedTouches[i].identifier,{x: ths.touchPoints[ev.changedTouches[i].identifier].clientX, y: ths.touchPoints[ev.changedTouches[i].identifier].clientY})
                 }
             }
             ev.preventDefault();
@@ -48,10 +47,11 @@ export class FGesture {
                         y: ths.touchPoints[ev.changedTouches[i].identifier].clientY - lastY
                     }
                 }
-            }
 
+            }
+            
             if (ev.targetTouches.length == 1) {
-                this.listeners.onDrag(
+                this.listeners.onDrag(ev.targetTouches[0].identifier,
                     { x: ths.touchPoints[ev.targetTouches[0].identifier].clientX, y: ths.touchPoints[ev.targetTouches[0].identifier].clientY },
                     ths.touchPoints[ev.targetTouches[0].identifier].delta
                 )
@@ -62,9 +62,9 @@ export class FGesture {
         })
         document.addEventListener('touchend', (ev: TouchEvent) => {
          //   console.log(ev);
-         let DEBUGG = {ev, ths};
+         
             for (let i = 0; i < Math.min(ths.touchPoints.length, ev.changedTouches.length); i++) {
-                ths.listeners.onTouchEnd({x: ths.touchPoints[ev.changedTouches[i].identifier]?.clientX, y: ths.touchPoints[ev.changedTouches[i].identifier]?.clientY})
+                ths.listeners.onTouchEnd(ev.changedTouches[i].identifier,{x: ths.touchPoints[ev.changedTouches[i].identifier]?.clientX, y: ths.touchPoints[ev.changedTouches[i].identifier]?.clientY})
                 if (ev.changedTouches[i].identifier < ths.touchPoints.length) {
                     //console.log(`Removing touch point ${ev.changedTouches[i].identifier}`)
                     ths.touchPoints[ev.changedTouches[i].identifier] = null;

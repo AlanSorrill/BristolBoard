@@ -1,6 +1,17 @@
+import { UIElement } from "./BristolImports";
 
 export interface BristolInputEvent {
 }
+// export class TouchPoint {
+//     startTime: number;
+//     constructor(startLocation: [x: number, y: number], overElement: UIElement){
+
+//         this.startTime = Date.now();
+//     }
+//     addMove(location: [x: number, y: number]){
+
+//     }
+// }
 export enum BristolInteraction {
     tap,
     doubleTap,
@@ -22,7 +33,10 @@ export interface BristolTouchEvent extends BristolCursorEvent {
 }
 
 export enum InputEventAction {
-    Down, Up
+    Down, Up, Move
+}
+export enum InputSource {
+    Mouse, Touch
 }
 export enum UppercaseEnglishLetterCharacter {
     A = 'A',
@@ -184,6 +198,7 @@ export class KeyboardInputEvent implements BristolInputEvent {
         this.isAlt = isAlt;
     }
 }
+
 export class MouseInputEvent implements BristolInputEvent {
     x: number;
     y: number;
@@ -194,29 +209,42 @@ export class MouseInputEvent implements BristolInputEvent {
 
 }
 export enum TapTuple {
-    "Single", "Double", "Tripple"
+    SingleTap, DoubleTap, TrippleTap
 }
-export class TapInputEvent extends MouseInputEvent {
-    count: TapTuple
+export type CoordTuple = [x: number, y: number]
+export interface RawPointerData {
+    position: [x: number, y: number] & CoordTuple
+    timeStamp: number,
+    source: InputSource
+    buttonOrFingerIndex: number
+    action: InputEventAction
 }
-export class MouseBtnInputEvent extends MouseInputEvent {
-    btn: number;
-    action: InputEventAction;
-    constructor(x: number, y: number, btn: number, action: InputEventAction = null) {
-        super(x, y);
-        this.action = action;
-        this.btn = btn;
-    }
+export interface RawPointerMoveData extends RawPointerData {
+    action: InputEventAction.Move,
+    delta: [x: number, y: number] & CoordTuple
 }
-export class MouseMovedInputEvent extends MouseInputEvent {
-    deltaX: number;
-    deltaY: number;
-    constructor(x: number, y: number, deltaX: number, deltaY: number) {
-        super(x, y);
-        this.deltaX = deltaX;
-        this.deltaY = deltaY;
-    }
+export function isRawPointerMoveData(rawData: RawPointerData): rawData is RawPointerMoveData {
+    return rawData.action == InputEventAction.Move;
 }
+
+// export class MouseBtnInputEvent extends MouseInputEvent {
+//     btn: number;
+//     action: InputEventAction;
+//     constructor(x: number, y: number, btn: number, action: InputEventAction = null) {
+//         super(x, y);
+//         this.action = action;
+//         this.btn = btn;
+//     }
+// }
+// export class MouseMovedInputEvent extends MouseInputEvent {
+//     deltaX: number;
+//     deltaY: number;
+//     constructor(x: number, y: number, deltaX: number, deltaY: number) {
+//         super(x, y);
+//         this.deltaX = deltaX;
+//         this.deltaY = deltaY;
+//     }
+// }
 export class MouseScrolledInputEvent extends MouseInputEvent {
     amount: number
     constructor(x: number, y: number, amount: number) {
@@ -224,22 +252,22 @@ export class MouseScrolledInputEvent extends MouseInputEvent {
         this.amount = amount;
     }
 }
-export class MouseDraggedInputEvent extends MouseMovedInputEvent {
-    btn: number
-    constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number) {
-        super(x, y, deltaX, deltaY);
-        this.btn = btn;
-    }
-}
-export class MousePinchedInputEvent extends MouseMovedInputEvent {
-    btn: number
-    pinchX: number;
-    pinchY: number;
+// export class MouseDraggedInputEvent extends MouseMovedInputEvent {
+//     btn: number
+//     constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number) {
+//         super(x, y, deltaX, deltaY);
+//         this.btn = btn;
+//     }
+// }
+// export class MousePinchedInputEvent extends MouseMovedInputEvent {
+//     btn: number
+//     pinchX: number;
+//     pinchY: number;
 
-    constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number, pinchX: number, pinchY: number) {
-        super(x, y, deltaX, deltaY);
-        this.btn = btn;
-        this.pinchX = pinchX;
-        this.pinchY = pinchY;
-    }
-}
+//     constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number, pinchX: number, pinchY: number) {
+//         super(x, y, deltaX, deltaY);
+//         this.btn = btn;
+//         this.pinchX = pinchX;
+//         this.pinchY = pinchY;
+//     }
+// }

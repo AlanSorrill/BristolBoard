@@ -18,14 +18,16 @@ declare global {
         toMap(indexKey: keyof T): Map<string, T>
         toSubArrays(subArrayLength: number): Array<T>[]
     }
-
+    interface Function {
+        description: string
+    }
 
 }
 export function IsType<T>(target: any, memberName: string): target is T {
     return (typeof target[memberName] != 'undefined')
 }
 //t: title, v: value
-export type optFunc<T> = (T | (() => T)) | { t: string, v: optFunc<T> };
+export type optFunc<T> = (T | (() => T));
 export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTransform<I, O> };
 
 String.prototype.replaceAt = function(index: number, textToInsert: string) {
@@ -136,16 +138,14 @@ export function getOptFuncTitle<T>(input: optFunc<T>, def: string = null): strin
     return `()=>(${evalOptionalFunc(input) ?? def})`;
 }
 
-export function evalOptionalFunc<T>(input: optFunc<T>, def: T = null) {
+export function evalOptionalFunc<T>(input: optFunc<T>, def: T = null): T {
     if (input == null || input == undefined) {
         return def;
     }
     if (typeof input == 'function') {
         return (input as (() => T))();
     }
-    if (typeof input['t'] == 'string') {
-        return evalOptionalFunc((input as { t: string, v: optFunc<T> }).v, def);
-    }
+
 
     return input;
 }

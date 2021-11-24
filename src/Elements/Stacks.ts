@@ -221,7 +221,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
 
             }
            
-        } else if (endCap.frame.result.bottom < this.frame.result.bottom) {
+        } else if (endCap?.frame?.result?.bottom < this.frame.result.bottom) {
             switch (this.overscrollBehavior) {
                 default:
                     log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)

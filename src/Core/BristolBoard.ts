@@ -1,6 +1,6 @@
 
 
-import { CoordTuple, ForEachLinkedTuple, isRawPointerMoveData, TapTuple } from "..";
+import { CoordTuple, ForEachLinkedTuple, isRawPointerMoveData, lengthOfVector2d, TapTuple } from "..";
 import {
     LinkedTuple, PunctuationCharacter, RawPointerData, RawPointerMoveData, StringToKeyboardInputKey,
     BristolFontStyle, BristolFontWeight, BristolFontFamily, BristolHAlign, BristolVAlign, LogLevel, UIFrame, UIFrameResult, logger, fColor, FColor, FHTML,
@@ -1017,8 +1017,8 @@ export class InteractionEventWatcher {
         let delta: CoordTuple = [0, 0]
         ForEachLinkedTuple(this.interactions, (value: RawPointerData, depth: number) => {
             if (isRawPointerMoveData(value)) {
-                delta[0] += value.delta[0];
-                delta[1] += value.delta[1];
+                delta[0] += Math.abs(value.delta[0]);
+                delta[1] += Math.abs(value.delta[1]);
             } else {
                 return false;
             }
@@ -1063,14 +1063,20 @@ export class InteractionEventWatcher {
                 }
 
                 let timeDown = this.timeSinceDown;
-                for (let i = 0; i < overElements.length; i++) {
-                    currentElement = overElements[i]
-                    if (UIElement.hasMouseBtnListener(currentElement)) {
-                        if (currentElement.mouseReleased({ start: this.lastDown, end: this.lastUp, timeDown: timeDown })) {
-                            break;
+                let distance = lengthOfVector2d(this.deltaSinceLastDown);
+
+                if (distance < InteractionEventWatcher.minDragDistance) {
+                    for (let i = 0; i < overElements.length; i++) {
+                        currentElement = overElements[i]
+                        if (UIElement.hasMouseBtnListener(currentElement)) {
+                            if (currentElement.mouseReleased({ start: this.lastDown, end: this.lastUp, timeDown: timeDown })) {
+                           // if (currentElement.mouseTapped(rawData)) {
+                                break;
+                            }
                         }
                     }
                 }
+
                 break;
             case InputEventAction.Move:
                 this.lastMove = rawData;

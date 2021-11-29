@@ -23,7 +23,7 @@ declare global {
     }
 
 }
-export function IsType<T>(target: any, memberName: string): target is T {
+export function IsType<T>(target: any, memberName: keyof T): target is T {
     return (typeof target[memberName] != 'undefined')
 }
 //t: title, v: value

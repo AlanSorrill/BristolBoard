@@ -107,7 +107,7 @@ export class Interp<T> {
         let durrationAlpha = Math.min(1, (Date.now() - this.lastToggle.time) / durration)
 
         if (evalOptionalFunc(this.target) != this.lastToggle.target) {
-            console.log(`Switching interp direction`)
+          //  console.log(`Switching interp direction`)
             this.lastToggle.target = evalOptionalFunc(this.target);
             this.lastToggle.time = Date.now() - (1 - durrationAlpha) * durration;
 

@@ -212,6 +212,9 @@ export enum TapTuple {
     SingleTap, DoubleTap, TrippleTap
 }
 export type CoordTuple = [x: number, y: number]
+export function lengthOfVector2d(vector: CoordTuple) {
+    return Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
+}
 export interface RawPointerData {
     position: [x: number, y: number] & CoordTuple
     timeStamp: number,

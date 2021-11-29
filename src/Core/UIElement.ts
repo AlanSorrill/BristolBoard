@@ -301,6 +301,9 @@ export abstract class UIElement {
     static hasKeyListener(target: UIElement): target is (UIElement & KeyListener) {
         return IsType<KeyListener>(target, 'keyReleased')
     }
+    static hasTapListener(target: UIElement): target is (UIElement & MouseTapListener){
+        return IsType<MouseTapListener>(target, 'mouseTapped')
+    }
     private static idCounter = 0;
     public static createUID(name: string) {
         return `${name}${this.idCounter++}`
@@ -328,5 +331,10 @@ export interface MouseWheelListener {
 export interface MouseBtnListener {
     mousePressed(evt: RawPointerData): boolean
     mouseReleased(evt: { start: RawPointerData, end: RawPointerData, timeDown: number }): boolean
+
+}
+
+export interface MouseTapListener {
+    mouseTapped(upEvt: RawPointerData): boolean
 
 }

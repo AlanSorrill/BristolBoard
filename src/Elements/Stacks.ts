@@ -220,8 +220,8 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                     this.rootOffset = 0;
 
             }
-           
-        } else if (endCap?.frame?.result?.bottom < this.frame.result.bottom) {
+
+        } else if (endCap?.frame?.result?.bottom < this.frame?.result?.bottom) {
             switch (this.overscrollBehavior) {
                 default:
                     log.info(`Unknown Overscroll behavior ${OverScrollBehavior[this.overscrollBehavior]}`)
@@ -232,7 +232,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
                         this.rootOffset += this.frame.result.right - endCap.frame.result.right;
                     }
             }
-          
+
         }
     }
 

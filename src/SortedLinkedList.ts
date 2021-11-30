@@ -1,19 +1,25 @@
 import { isNumber } from './CommonImports';
 
-export class SortedLinkedList<T> {
+export class LinkedList<T> {
     get length(): number {
         return this.count;
     }
     private count: number = 0;
 
 
-    comparator: (a: T, b: T) => number;
-    head: SortedLinkedListNode<T> = null;
+    comparator: ((a: T, b: T) => number) | null;
+    head: LinkedListNode<T> = null;
 
-    public static Create<T>(comparator: (a: T, b: T) => number) {
-        let out = new SortedLinkedList<T>(comparator);
+    get isSorted(): boolean {
+        return this.comparator != null
+    }
+    public static CreateUnsorted<T>() {
+        return this.CreateSorted<T>(null);
+    }
+    public static CreateSorted<T>(comparator: (a: T, b: T) => number) {
+        let out = new LinkedList<T>(comparator);
         return new Proxy(out, {
-            get: function (target: SortedLinkedList<T>, name) {
+            get: function (target: LinkedList<T>, name) {
                 if (name in target) {
                     return target[name]
                 };
@@ -23,7 +29,7 @@ export class SortedLinkedList<T> {
                     target.forEach((v: T, index: number) => {
                         if (index == targetIndex) {
                             out = v;
-                            return true;
+                            return 'break';
                         }
                     })
                     return out;
@@ -32,12 +38,12 @@ export class SortedLinkedList<T> {
             }
         })
     }
-    ensureOrder(node: SortedLinkedListNode<T> = null) {
+    ensureOrder(node: LinkedListNode<T> = null) {
         if (node == null) {
             //ensure order on head
             if (this.head != null && this.head.next != null) {
                 if (this.comparator(this.head.value, this.head.next.value) < 0) {
-                    let nodes: [SortedLinkedListNode<T>, SortedLinkedListNode<T>, SortedLinkedListNode<T>] = [this.head, this.head.next, this.head.next.next]
+                    let nodes: [LinkedListNode<T>, LinkedListNode<T>, LinkedListNode<T>] = [this.head, this.head.next, this.head.next.next]
                     this.head = nodes[1];
                     this.head.next = nodes[0];
                     this.head.next.next = nodes[2];
@@ -51,7 +57,7 @@ export class SortedLinkedList<T> {
             }
         }
     }
-    private moveForward(node: SortedLinkedListNode<T>) {
+    private moveForward(node: LinkedListNode<T>) {
         console.log(`Moving node forward ${node.value}`)
         if (node == null) {
             return;
@@ -59,7 +65,7 @@ export class SortedLinkedList<T> {
         if (node.next == null) {
             return;
         }
-        let nodes: [lastNode: SortedLinkedListNode<T>, thisNode: SortedLinkedListNode<T>, nextNode: SortedLinkedListNode<T>, nextNextNode: SortedLinkedListNode<T>] = [node.last, node, node.next, node.next.next];
+        let nodes: [lastNode: LinkedListNode<T>, thisNode: LinkedListNode<T>, nextNode: LinkedListNode<T>, nextNextNode: LinkedListNode<T>] = [node.last, node, node.next, node.next.next];
         //cut thisNode out
         if (nodes[0] != null) {
             nodes[0].next = nodes[2];
@@ -74,14 +80,31 @@ export class SortedLinkedList<T> {
         nodes[1].last = nodes[2];
         nodes[1].next = nodes[3];
     }
-    add(value: T) {
+   
+    //side start or end only works on unsorted lists
+    add(value: T, side: 'start' | 'end' = 'end'): number {
         this.count++;
         if (this.head == null) {
-            this.head = new SortedLinkedListNode<T>(value);
+            this.head = new LinkedListNode<T>(value);
             return 0;
         }
-
-        let fresh: SortedLinkedListNode<T> = new SortedLinkedListNode<T>(value);
+        if (!this.isSorted) {
+            if (side == 'start') {
+                let tmp = this.head;
+                this.head = new LinkedListNode<T>(value);
+                this.head.next = tmp;
+                if (tmp != null) {
+                    tmp.last = this.head;
+                }
+                return 0;
+            } else {
+                let tmp = this.tail;
+                tmp.next = new LinkedListNode<T>(value);
+                tmp.next.last = tmp;
+                return this.count - 1;
+            }
+        }
+        let fresh: LinkedListNode<T> = new LinkedListNode<T>(value);
         let n = this.head;
         if (this.isALesser(value, n.value)) {
 
@@ -106,7 +129,10 @@ export class SortedLinkedList<T> {
         return i;
     }
     //removes first element that condition(T) returns true for
-    remove(condition: ((v: T) => boolean)) {
+    remove(condition: ((v: T) => boolean), exitAfterFirstRemoval: boolean = true) {
+        if (this.head == null) {
+            return;
+        }
         if (condition(this.head.value)) {
             this.head = this.head.next;
             if (this.head != null) {
@@ -115,6 +141,11 @@ export class SortedLinkedList<T> {
             } else {
                 this.count = 0;
             }
+            if (exitAfterFirstRemoval) {
+                return;
+            }
+        }
+        if (this.head == null) {
             return;
         }
         let n = this.head.next;
@@ -126,7 +157,9 @@ export class SortedLinkedList<T> {
                     n.next.last = lastN;
                 }
                 this.count--;
-                break;
+                if (exitAfterFirstRemoval) {
+                    break;
+                }
             }
             lastN = n;
             n = n.next;
@@ -135,7 +168,7 @@ export class SortedLinkedList<T> {
     clear(onRemove: (value: T) => void = (v: T) => { }) {
         let tmp = this.head;
         this.head = null;
-        let next: SortedLinkedListNode<T>;
+        let next: LinkedListNode<T>;
         while (tmp != null) {
             next = tmp.next;
             onRemove(tmp.value);
@@ -157,15 +190,15 @@ export class SortedLinkedList<T> {
         return null;
     }
 
-    //return true to break
-    forEach(callback: (value: T, index: number) => (void | boolean), fixOrder: boolean = true) {
+    //return 'break' to break
+    forEach(callback: (value: T, index: number) => (void | 'break'), fixOrder: boolean = true) {
         let n = this.head;
         let i = 0;
-        if (fixOrder) {
+        if (this.isSorted && fixOrder) {
             this.ensureOrder();
             while (n != null) {
                 this.ensureOrder(n);
-                if (callback(n.value, i) == true) {
+                if (callback(n.value, i) == 'break') {
                     break;
                 }
                 i++;
@@ -173,7 +206,7 @@ export class SortedLinkedList<T> {
             }
         } else {
             while (n != null) {
-                if (callback(n.value, i) == true) {
+                if (callback(n.value, i) == 'break') {
                     break;
                 }
                 i++;
@@ -202,11 +235,11 @@ export class SortedLinkedList<T> {
         return out;
     }
 
-    private constructor(comparator: (a: T, b: T) => number) {
+    private constructor(comparator: (a: T, b: T) => number | null) {
         this.comparator = comparator;
     }
 
-    get tail(): SortedLinkedListNode<T> {
+    get tail(): LinkedListNode<T> {
         let n = this.head;
         if (n == null) {
             return null;
@@ -230,11 +263,11 @@ export class SortedLinkedList<T> {
     }
 }
 
-export class SortedLinkedListNode<T> {
+export class LinkedListNode<T> {
     value: T
-    next: SortedLinkedListNode<T>
-    last: SortedLinkedListNode<T>
-    constructor(value: T, next: SortedLinkedListNode<T> = null, last: SortedLinkedListNode<T> = null) {
+    next: LinkedListNode<T>
+    last: LinkedListNode<T>
+    constructor(value: T, next: LinkedListNode<T> = null, last: LinkedListNode<T> = null) {
         this.value = value;
         this.next = next;
         this.last = last;
@@ -242,19 +275,47 @@ export class SortedLinkedListNode<T> {
 }
 
 export type LinkedTuple<T> = [T, null | LinkedTuple<T>]
-
-//return false to break loop
-export function ForEachLinkedTuple<T>(linkedTuple: LinkedTuple<T>, callback: (value: T, depth: number)=>(void | false)){
-    let tmp = linkedTuple
-    let depth = 0;
-    while(tmp != null){
-        if(callback(tmp[0], depth) === false){
-            break;
+export class LinkedTupleTools {
+    static CreateLinkedTuple<T>(initialValue: T): LinkedTuple<T> {
+        return [initialValue, null]
+    }
+    static ForEachLinkedTuple<T>(linkedTuple: LinkedTuple<T>, callback: (value: T, depth: number) => (void | false)) {
+        let tmp = linkedTuple
+        let depth = 0;
+        while (tmp != null) {
+            if (callback(tmp[0], depth) === false) {
+                break;
+            }
+            depth++;
+            tmp = tmp[1];
         }
-        depth++;
-        tmp = tmp[1];
+    }
+    static AddToEndOfLinkedTuple<T>(linkedTuple: LinkedTuple<T>, newEndValue: T) {
+        if (linkedTuple == null) {
+            return LinkedTupleTools.CreateLinkedTuple(newEndValue);
+        }
+        let current = linkedTuple;
+        while (current[1] != null) {
+            current = current[1];
+        }
+        current[1] = LinkedTupleTools.CreateLinkedTuple(newEndValue)
+        return linkedTuple;
+    }
+    static SearchAndDestroy<T>(linkedTupleHead: LinkedTuple<T>, shouldRemove: (value: T) => boolean, onRemove?: (value: T) => void) {
+        let tmp = linkedTupleHead
+
+        while (tmp != null) {
+            if (shouldRemove(tmp[0])) {
+                onRemove?.(tmp[0]);
+                if (tmp[1] != null) {
+                    tmp[1] = tmp[1][1];
+                } else {
+                    tmp[1] = null;
+                }
+            }
+
+            tmp = tmp[1];
+        }
     }
 }
-export function CreateLinkedTuple<T>(initialValue: T): LinkedTuple<T>{
-    return [initialValue, null]
-}
+

@@ -1,7 +1,7 @@
 
-import { isNumber, MouseWheelListener, RawPointerData, RawPointerMoveData } from '..';
+import { isNumber, MouseWheelListener, RawPointerData, RawPointerMoveData, RawPointerScrollData } from '..';
 import { LogLevel, UIFrameResult, BristolBoard, UIFrame_CornerWidthHeight, UIElement, optFunc, IsType, MouseDragListener, UIFrame, logger } from '../BristolImports'
-import { MouseScrolledInputEvent } from '../BristolInput';
+
 let log = logger.local('UIStack');
 log.allowBelowLvl(LogLevel.naughty)
 export interface UIFrameDescription_StackChild {
@@ -175,7 +175,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     }
     mouseDragged(evt: RawPointerMoveData): boolean {
         if (this.options.isVertical) {
-            this.addScroll(evt.delta[1]);
+            this.addScroll(evt.delta[1] * -1);
         } else {
             this.addScroll(evt.delta[0]);
         }
@@ -185,8 +185,8 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     onDragEnd(event: RawPointerData | [start: RawPointerData, lastMove: RawPointerMoveData]): boolean {
         return true;
     }
-    mouseWheel(event: MouseScrolledInputEvent): boolean {
-        this.addScroll(event.amount);
+    mouseWheel(event: RawPointerScrollData): boolean {
+        this.addScroll(event.amount * 10);
 
         return true;
     }

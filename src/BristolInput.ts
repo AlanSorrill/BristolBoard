@@ -33,7 +33,7 @@ export interface BristolTouchEvent extends BristolCursorEvent {
 }
 
 export enum InputEventAction {
-    Down, Up, Move
+    Down, Up, Move, Scroll
 }
 export enum InputSource {
     Mouse, Touch
@@ -199,15 +199,15 @@ export class KeyboardInputEvent implements BristolInputEvent {
     }
 }
 
-export class MouseInputEvent implements BristolInputEvent {
-    x: number;
-    y: number;
-    constructor(x: number, y: number) {
-        this.x = x;
-        this.y = y;
-    }
+// export class MouseInputEvent implements BristolInputEvent {
+//     x: number;
+//     y: number;
+//     constructor(x: number, y: number) {
+//         this.x = x;
+//         this.y = y;
+//     }
 
-}
+// }
 export enum TapTuple {
     SingleTap, DoubleTap, TrippleTap
 }
@@ -216,7 +216,7 @@ export function lengthOfVector2d(vector: CoordTuple) {
     return Math.sqrt(Math.pow(vector[0], 2) + Math.pow(vector[1], 2));
 }
 export interface RawPointerData {
-    position: [x: number, y: number] & CoordTuple
+    position: CoordTuple
     timeStamp: number,
     source: InputSource
     buttonOrFingerIndex: number
@@ -224,10 +224,19 @@ export interface RawPointerData {
 }
 export interface RawPointerMoveData extends RawPointerData {
     action: InputEventAction.Move,
-    delta: [x: number, y: number] & CoordTuple
+    delta: CoordTuple
 }
+export interface RawPointerScrollData extends RawPointerData {
+    action: InputEventAction.Scroll,
+    amount: number
+}
+
 export function isRawPointerMoveData(rawData: RawPointerData): rawData is RawPointerMoveData {
     return rawData.action == InputEventAction.Move;
+}
+
+export function isRawPointerScrollData(rawData: RawPointerData): rawData is RawPointerScrollData {
+    return rawData.action == InputEventAction.Scroll;
 }
 
 // export class MouseBtnInputEvent extends MouseInputEvent {
@@ -248,13 +257,13 @@ export function isRawPointerMoveData(rawData: RawPointerData): rawData is RawPoi
 //         this.deltaY = deltaY;
 //     }
 // }
-export class MouseScrolledInputEvent extends MouseInputEvent {
-    amount: number
-    constructor(x: number, y: number, amount: number) {
-        super(x, y);
-        this.amount = amount;
-    }
-}
+// export class MouseScrolledInputEvent extends MouseInputEvent {
+//     amount: number
+//     constructor(x: number, y: number, amount: number) {
+//         super(x, y);
+//         this.amount = amount;
+//     }
+// }
 // export class MouseDraggedInputEvent extends MouseMovedInputEvent {
 //     btn: number
 //     constructor(x: number, y: number, btn: number, deltaX: number, deltaY: number) {

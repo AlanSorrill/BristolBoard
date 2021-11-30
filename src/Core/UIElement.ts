@@ -1,13 +1,13 @@
 
 import { InteractionEventWatcher } from '..';
-import { FColor, logger, UIFrameDescription, UIFrameResult, SortedLinkedList, KeyboardInputEvent, MouseInputEvent, MouseScrolledInputEvent, UIFrame, fColor, BristolBoard, IsType, RawPointerMoveData, RawPointerData } from '../BristolImports'
+import { FColor, logger, UIFrameDescription, UIFrameResult, LinkedList, KeyboardInputEvent, UIFrame, fColor, BristolBoard, IsType, RawPointerMoveData, RawPointerData } from '../BristolImports'
 let log = logger.local('UIElement')
 
 export abstract class UIElement {
 
     id: string;
     parent: UIElement | BristolBoard<any> = null;
-    childElements: SortedLinkedList<UIElement> = SortedLinkedList.Create((a: UIElement, b: UIElement) => (b.depth - a.depth));
+    childElements: LinkedList<UIElement> = LinkedList.CreateSorted((a: UIElement, b: UIElement) => (b.depth - a.depth));
 
     zOffset: number = 0;
     frame: UIFrame;
@@ -37,27 +37,27 @@ export abstract class UIElement {
         }
     }
 
-    get mouseState(): MouseState {
-        let downIndicies: number[] = [];
-        let hover: boolean = false;
-        for (let i = 0; i < this.brist.interactionEvents.length; i++) {
-            if (this.brist.interactionEvents[i] != null) {
-                let watcher: InteractionEventWatcher = this.brist.interactionEvents[i]
-                if (watcher.isDown) {
-                    downIndicies.push(i);
-                }
-                if (this.frame.containsPoint(watcher.lastEvent.position[0], watcher.lastEvent.position[1])) {
-                    hover = true;
-                }
+    // get mouseState(): MouseState {
+    //     let downIndicies: number[] = [];
+    //     let hover: boolean = false;
+    //     for (let i = 0; i < this.brist.interactionEvents.length; i++) {
+    //         if (this.brist.interactionEvents[i] != null) {
+    //             let watcher: InteractionEventWatcher = this.brist.interactionEvents[i]
+    //             if (watcher.isDown) {
+    //                 downIndicies.push(i);
+    //             }
+    //             if (this.frame.containsPoint(watcher.lastEvent.position[0], watcher.lastEvent.position[1])) {
+    //                 hover = true;
+    //             }
 
-            }
-        }
-        if(downIndicies.length > 0){
-            return downIndicies;
-        }
-        return hover ? 'Hover' : 'Gone'
+    //         }
+    //     }
+    //     if(downIndicies.length > 0){
+    //         return downIndicies;
+    //     }
+    //     return hover ? 'Hover' : 'Gone'
 
-    }
+    // }
 
     get isAttachedToBristol() {
         if (this.parent instanceof BristolBoard) {
@@ -289,9 +289,9 @@ export abstract class UIElement {
     static hasMouseMovementListener(target: UIElement): target is (UIElement & MouseMovementListener) {
         return IsType<MouseMovementListener>(target, 'mouseEnter')
     }
-    static hasMouseBtnListener(target: UIElement): target is (UIElement & MouseBtnListener) {
-        return IsType<MouseBtnListener>(target, 'mousePressed')
-    }
+    // static hasMouseBtnListener(target: UIElement): target is (UIElement & MouseBtnListener) {
+    //     return IsType<MouseBtnListener>(target, 'mousePressed')
+    // }
     static hasMouseDragListener(target: UIElement): target is (UIElement & MouseDragListener) {
         return IsType<MouseDragListener>(target, 'mouseDragged')
     }
@@ -309,11 +309,12 @@ export abstract class UIElement {
         return `${name}${this.idCounter++}`
     }
 }
-export type MouseState = 'Hover' | 'Gone' | number[]
+
 export interface MouseMovementListener {
-    mouseEnter(evt: MouseInputEvent): boolean
-    mouseExit(evt: MouseInputEvent): boolean
+    mouseEnter(evt: RawPointerMoveData): boolean
+    mouseExit(evt: RawPointerMoveData): void
     mouseMoved(evt: RawPointerMoveData): boolean
+    isMouseOver: boolean
 }
 export interface MouseDragListener {
     shouldDragLock(event: RawPointerData | [start: RawPointerData, lastMove: RawPointerMoveData]): boolean
@@ -326,13 +327,13 @@ export interface KeyListener {
     keyReleased(evt: KeyboardInputEvent): boolean
 }
 export interface MouseWheelListener {
-    mouseWheel(delta: MouseScrolledInputEvent): boolean
+    mouseWheel(delta: RawPointerData): boolean
 }
-export interface MouseBtnListener {
-    mousePressed(evt: RawPointerData): boolean
-    mouseReleased(evt: { start: RawPointerData, end: RawPointerData, timeDown: number }): boolean
+// export interface MouseBtnListener {
+//     mousePressed(evt: RawPointerData): boolean
+//     mouseReleased(evt: { start: RawPointerData, end: RawPointerData, timeDown: number }): boolean
 
-}
+// }
 
 export interface MouseTapListener {
     mouseTapped(upEvt: RawPointerData): boolean

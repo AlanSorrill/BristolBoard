@@ -376,7 +376,7 @@ export class UIStackRecycler<DataType, ChildType extends UIElement> extends UIEl
     forEachVisibleChild(onEach: (elem: UIStackChildContainer<DataType, ChildType>, index: number) => (void | boolean)) {
         let elem = this.rootElement;
         let index = this.rootIndex;
-        this.fixOffsetOverflow()
+        //this.fixOffsetOverflow()
         while (elem != null) {
             if (onEach(elem, index) === false) {
                 break;

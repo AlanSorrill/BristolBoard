@@ -1,5 +1,5 @@
 
-import { RawPointerData } from "..";
+import { clamp, RawPointerData } from "..";
 import {
     MouseTapListener, MouseMovementListener,
     evalOptionalFunc, optFunc, UIFrameDescription_CornerWidthHeight,
@@ -19,17 +19,32 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseT
     fontFamily: optFunc<BristolFontFamily>
     backgroundColor: optFunc<FColor> = fColor.red.base;
     foregroundColor: optFunc<FColor> = fColor.white;
+    ensureTextNotTooWide: optFunc<boolean> = false;
     onClick: () => void;
 
-    constructor(text: optFunc<string>, onClick: () => void, uiFrame: UIFrame_CornerWidthHeight | UIFrameDescription_CornerWidthHeight, brist: BristolBoard<any>) {
+    constructor(text: optFunc<string>, onClick: (() => void) | ({
+        onClick: () => void,
+        onMouseEnter: (evt: RawPointerMoveData) => void,
+        onMouseExit: (evt: RawPointerMoveData) => void
+    }), uiFrame: UIFrame_CornerWidthHeight | UIFrameDescription_CornerWidthHeight, brist: BristolBoard<any>) {
         super(`btn${UIButton.uidCount++}`, uiFrame, brist);
-        this.onClick = onClick;
+        if (typeof onClick == 'function') {
+            this.onClick = onClick;
+        } else {
+            this.onClick = onClick.onClick;
+            this.onMouseEnter = onClick.onMouseEnter;
+            this.onMouseExit = onClick.onMouseExit;
+        }
         this.text = text;
     }
+    onMouseEnter: (evt: RawPointerMoveData) => void = () => { };
+    onMouseExit: (evt: RawPointerMoveData) => void = () => { };
     mouseEnter(evt: RawPointerMoveData): boolean {
+        this.onMouseEnter(evt);
         return true;
     }
     mouseExit(evt: RawPointerMoveData): void {
+        this.onMouseExit(evt);
     }
     isMouseOver: boolean = false;
 
@@ -61,7 +76,7 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseT
         return this;
     }
     onDrawBackground(frame: UIFrameResult, deltaMs: number) {
-        let color = evalOptionalTransfrom(this.backgroundColor, this.isMouseOver);
+        let color = evalOptionalFunc(this.backgroundColor);
         if (color != null) {
             this.brist.fillColor(color);
             this.brist.ctx.beginPath();
@@ -69,11 +84,31 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseT
             this.brist.ctx.beginPath();
         }
     }
+    private lastFontSize = -1;
+    private lastWidth = -1;
+    private lastCalculatedFontSize = 1;
     setupFont(frame: UIFrameResult) {
         this.brist.fillColor(fColor.lightText[1]);
         this.brist.textAlign(BristolHAlign.Center, BristolVAlign.Middle);
         this.brist.fontFamily(evalOptionalFunc(this.fontFamily, BristolFontFamily.Verdana));
-        this.brist.textSize(evalOptionalFunc(this.textSize, 24));
+        if (evalOptionalFunc(this.ensureTextNotTooWide, false)) {
+            let fontSize = evalOptionalFunc(this.textSize, 24);
+            let text = evalOptionalFunc(this.text, '');
+            this.brist.textSize(fontSize);
+            if (this.lastFontSize != fontSize || this.lastWidth != this.getWidth()) {
+
+                while (this.brist.ctx.measureText(text).width >= this.getWidth() - evalOptionalFunc(this.paddingHorizontal, 0) * 2) {
+                    fontSize -= 2;
+                    this.brist.textSize(fontSize);
+                }
+                this.lastCalculatedFontSize = fontSize;
+            } else {
+                this.brist.textSize(this.lastCalculatedFontSize);
+            }
+        } else {
+            this.brist.textSize(evalOptionalFunc(this.textSize, 24));
+
+        }
     }
     onDrawForeground(frame: UIFrameResult, deltaMs: number) {
         this.setupFont(frame);
@@ -90,4 +125,31 @@ export class UIButton extends UIElement implements MouseMovementListener, MouseT
 
 
 
+}
+export class UIProgressButton extends UIButton {
+    progressColor: optFunc<FColor> = fColor.green.base;
+    getProgress: optFunc<number> = 0;
+    constructor(text: optFunc<string>, onClick: () => void | ({
+        onClick: () => void,
+        onMouseEnter: (evt: RawPointerMoveData) => void,
+        onMouseExit: (evt: RawPointerMoveData) => void
+    }), getProgress: () => number, uiFrame: UIFrame_CornerWidthHeight | UIFrameDescription_CornerWidthHeight, brist: BristolBoard<any>) {
+        super(text, onClick, uiFrame, brist);
+        this.getProgress = getProgress;
+    }
+    onDrawBackground(frame: UIFrameResult, deltaMs: number): void {
+        let progressColor = evalOptionalFunc(this.progressColor);
+        let background = evalOptionalFunc(this.backgroundColor);
+        if (progressColor != null) {
+            this.brist.ctx.beginPath();
+            this.brist.fillColor(background);
+            this.brist.rectFrame(frame, false, true);
+            this.brist.ctx.beginPath();
+            this.brist.fillColor(progressColor);
+            this.brist.ctx.rect(frame.left, frame.top, frame.width * clamp(evalOptionalFunc(this.getProgress, 0), 0, 1), frame.height);
+            this.brist.ctx.fill();
+            this.brist.ctx.beginPath();
+        }
+        //super.onDrawBackground(frame,deltaMs);
+    }
 }

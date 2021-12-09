@@ -119,9 +119,9 @@ export function removeCammelCase(input: string): string {
     }
     return out.join('');
 }
-String.prototype.replaceAll = function (a: string, b: string) {
-    return this.split(a).join(b);
-};
+// String.prototype.replaceAll = function (a: string, b: string) {
+//     return this.split(a).join(b);
+// };
 export function isNumber(input: number | string) {
     return !isNaN(input as any)
 }

@@ -5,15 +5,15 @@ export class FColorSwath {
         this.lighten3 = FColor.fromHex(data['200']);
         this.lighten2 = FColor.fromHex(data['300']);
         this.lighten1 = FColor.fromHex(data['400']);
-        this.base =     FColor.fromHex(data['500']);
-        this.darken1 =  FColor.fromHex(data['600']);
-        this.darken2 =  FColor.fromHex(data['700']);
-        this.darken3 =  FColor.fromHex(data['800']);
-        this.darken4 =  FColor.fromHex(data['900']);
-        this.accent1 =  FColor.fromHex(data['a100'] ?? '#000');
-        this.accent2 =  FColor.fromHex(data['a200'] ?? '#000');
-        this.accent3 =  FColor.fromHex(data['a400'] ?? '#000');
-        this.accent4 =  FColor.fromHex(data['a700'] ?? '#000');
+        this.base = FColor.fromHex(data['500']);
+        this.darken1 = FColor.fromHex(data['600']);
+        this.darken2 = FColor.fromHex(data['700']);
+        this.darken3 = FColor.fromHex(data['800']);
+        this.darken4 = FColor.fromHex(data['900']);
+        this.accent1 = FColor.fromHex(data['a100'] ?? '#000');
+        this.accent2 = FColor.fromHex(data['a200'] ?? '#000');
+        this.accent3 = FColor.fromHex(data['a400'] ?? '#000');
+        this.accent4 = FColor.fromHex(data['a700'] ?? '#000');
     }
     lighten5: FColor;
     lighten4: FColor;
@@ -83,7 +83,7 @@ export class FColor {
         return (this.aa / this.total) * 255
     }
     get hasChanged(): boolean {
-        return this.oldStr == null;(this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
+        return this.oldStr == null; (this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
     }
     private genStr() {
         this.oldStr = `rgb${this.a != -1 ? 'a' : ''}(${this.r}, ${this.g}, ${this.b}${this.a != -1 ? (', ' + this.a) : ''})`;
@@ -96,16 +96,16 @@ export class FColor {
         }
         return this.oldStr;
     }
-    copy(){
+    copy() {
         return new FColor(this.rr, this.gg, this.bb, this.aa, this.total);
     }
     //opacity 0-255
-    setAlpha(a: number){
+    setAlpha(a: number) {
         this.aa = a
         return this;
     }
     //opacity 0-1
-    setOpacity(decimalPercent: number){
+    setOpacity(decimalPercent: number) {
         this.setAlpha(this.total * decimalPercent);
         return this;
     }
@@ -432,10 +432,21 @@ export class FColorDirectory {
     white: FColor;
     iowaGold: FColor;
     darkMode: [FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor, FColor] = [null, null, null, null, null, null, null, null, null, null, null, null]
-    lightText: [FColor, FColor] = [FColor.fromHex('#9E9E9E'), FColor.fromHex('#E0E0E0')]
+    lightText: [FColor, FColor] = [FColor.fromHex('#a8a8a8'), FColor.fromHex('#E0E0E0')]
     darkText: [FColor, FColor] = [FColor.fromHex('#373737'), FColor.fromHex('#898989')]
+    cssElement: HTMLStyleElement = null;
     public static fColor: FColorDirectory = null;//singlton instance
 
+    proceduralCss: string[] = []
+    addCss(css: string, update: boolean = true) {
+        this.proceduralCss.push(css);
+        if (update) {
+            this.updateProceduralCss()
+        }
+    }
+    updateProceduralCss() {
+        this.cssElement.innerHTML = this.proceduralCss.join('\n');
+    }
     constructor() {
         //          0  1   2   3   4   5   6   7   8   9   10  11
         let dmcs = [0, 15, 20, 25, 30, 34, 38, 42, 47, 54, 60, 70];
@@ -450,16 +461,16 @@ export class FColorDirectory {
             return FColor.fromHex(out);
         }
         let darkModeColorCount = 11;
-        var genCss = " ";
-        let cssElem: HTMLStyleElement = document.createElement('style');
+        this.cssElement = document.createElement('style');
 
         for (let i = 0; i <= darkModeColorCount; i++) {
             this.darkMode[i] = getDarkModeColor(i);
-            genCss = genCss + `\n.darkBackground${i}{background-color: ${getDarkModeColor(i).toHexString()}}\n`;
+            this.addCss(`.darkBackground${i} {background-color: ${getDarkModeColor(i).toHexString()}}`, false)
+            this.addCss(`.hover-darkBackground${i}:hover {background-color: ${getDarkModeColor(i).toHexString()} !important}`, false)
         }
         //let tst = //new DOMParser().parseFromString(`${genCss}</style>`, 'text/html')
-        cssElem.innerHTML = genCss;
-        document.querySelector('head').append(cssElem);
+        this.updateProceduralCss()
+        document.querySelector('head').append(this.cssElement);
         //$(`${genCss}</style>`).appendTo("head");
 
         let colorNames = Object.keys(FColorDirectory.materialColors);
@@ -523,10 +534,19 @@ export class FColorDirectory {
                     }
                     //console.log("[" + i + ", " + j + "] Mapping colors." + colorNames[j] + "." + englishLabel + " = " + currentColor[colorLabels[j]]);
                     this[colorNames[i]][englishLabel] = FColor.fromHex(currentColor[colorLabels[j]]);
+                    this.addCss(`.${colorNames[i]}-${englishLabel} {background-color: ${currentColor[colorLabels[j]]}}`, false);
+                    this.addCss(`.hover-${colorNames[i]}-${englishLabel}:hover {background-color: ${currentColor[colorLabels[j]]} !important}`, false);
                 }
             } else {
                 this[colorNames[i]] = FColor.fromHex(currentColor ?? "#ff00ff");
+                this.addCss(`.${colorNames[i]}-${englishLabel} {background-color: ${currentColor ?? "#ff00ff"}}`, false);
+                this.addCss(`.hover-${colorNames[i]}-${englishLabel}:hover {background-color: ${currentColor ?? "#ff00ff"} !important}`, false);
             }
         }
+        this.updateProceduralCss();
+    }
+    createCssHoverClass(className: string, hoverBackground: FColor) {
+        //this.addCss(`.${className} {background-color: ${hoverBackground.toHexString()} !important}`)
+        this.addCss(`.${className}:hover {background-color: ${hoverBackground.toHexString()} !important}`)
     }
 }

@@ -1,4 +1,5 @@
 
+import { isNumber } from '.';
 import { evalOptionalFunc, ifUndefined, lerp, optFunc } from './CommonImports'
 
 export class Animator<n> {
@@ -55,7 +56,7 @@ export class InterpManager {
 }
 export interface InterpOptions<T> {
     durration?: optFunc<number>,
-    
+
     startAlpha?: number
     onAnimStart?: (interp: Interp<T>) => void
     onAnimEnd?: (interp: Interp<T>) => void
@@ -107,7 +108,7 @@ export class Interp<T> {
         let durrationAlpha = Math.min(1, (Date.now() - this.lastToggle.time) / durration)
 
         if (evalOptionalFunc(this.target) != this.lastToggle.target) {
-          //  console.log(`Switching interp direction`)
+            //  console.log(`Switching interp direction`)
             this.lastToggle.target = evalOptionalFunc(this.target);
             this.lastToggle.time = Date.now() - (1 - durrationAlpha) * durration;
 
@@ -118,13 +119,13 @@ export class Interp<T> {
             if (durrationAlpha == 1 || durrationAlpha == 0) {
                 this.isTransitioning = false;
                 this.options.onAnimEnd?.(this);
-                
+
             }
         } else {
             if (durrationAlpha != 1 && durrationAlpha != 0) {
                 this.isTransitioning = true;
                 this.options.onAnimStart?.(this);
-                
+
             }
         }
 
@@ -143,10 +144,10 @@ export class Interp<T> {
 
         return this.method.mixer(evalOptionalFunc(this.b), evalOptionalFunc(this.a), this.method.curve(this.alpha))
     }
-  
+
 }
 
-export function smoothFloat(inputValue: ()=>number, velocityPerSecond: optFunc<number> = 1.0){
+export function smoothFloat(inputValue: () => number, velocityPerSecond: optFunc<number> = 1.0) {
     let lastTime = Date.now();
     let currentTime = lastTime;
     let previousValue: number = inputValue();
@@ -154,15 +155,20 @@ export function smoothFloat(inputValue: ()=>number, velocityPerSecond: optFunc<n
     let valueDelta: number;
     let maxValueDelta: number;
     let sign: number = 1;
-    return ()=>{
+    return () => {
+        if (isNaN(previousValue) || !isNumber(previousValue)) {
+            previousValue = inputValue();
+            return previousValue;
+        }
         currentTime = Date.now();
         timeDelta = (currentTime - lastTime) / 1000.0;
         valueDelta = inputValue() - previousValue;
         sign = valueDelta >= 0 ? 1 : -1;
         maxValueDelta = evalOptionalFunc(velocityPerSecond) * timeDelta;
 
-        valueDelta = Math.min(Math.abs(valueDelta),maxValueDelta) * sign;
+        valueDelta = Math.min(Math.abs(valueDelta), maxValueDelta) * sign;
         previousValue += valueDelta;
+
         return previousValue;
     }
 }
@@ -170,9 +176,9 @@ export function interpFunc<T>(a: optFunc<T>, b: optFunc<T>, target: optFunc<Inte
     let interper = new Interp<T>(a, b, target, options);
     return () => interper.getValue();
 }
-export function linearInterp(a: optFunc<number>, b: optFunc<number>, target: optFunc<InterpEnd>, options: InterpOptions<number>) {
+export function linearInterp(a: optFunc<number>, b: optFunc<number>, target: optFunc<InterpEnd>, options: InterpOptions<number> = {}) {
     let opts: InterpOptions<number> & InterpMethod<number> = options as any;
     opts.curve = (alpha) => alpha,
-    opts.mixer = (a: number, b: number, alpha: number) => lerp(a, b, alpha)
+        opts.mixer = (a: number, b: number, alpha: number) => lerp(a, b, alpha)
     return interpFunc(a, b, target, opts)
 }

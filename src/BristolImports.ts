@@ -20,5 +20,6 @@ export * from './Elements/BristolButton'
 export * from './Elements/Stacks'
 export * from './Core/BristolBoard'
 
+export * from './MaterialIcons'
 export * from './BristolEnums'
 export * from './BristolInput'

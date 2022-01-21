@@ -16,6 +16,7 @@ export enum BristolFontStyle {
 }
 export enum BristolFontFamily {
     Arial = 'Arial',
+    Antonio = 'Antonio',
     Roboto = 'Roboto',
     Raleway = 'Raleway',
     Baloo = 'Baloo 2',
@@ -23,7 +24,9 @@ export enum BristolFontFamily {
     TimesNewRoman = 'TimesNewRoman',
     CourierNew = 'Courier New',
     Monospace = 'Monospace',
+    ComicSans = `"Comic Sans MS", "Comic Sans"`,
     CascadiaCode = 'Cascadia Code',
+    Rustica = 'rustica',
     MaterialIcons = "Material Icons",
     MaterialIconsOutlined = "Material Icons Outlined"
 }

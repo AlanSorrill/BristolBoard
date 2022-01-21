@@ -67,6 +67,8 @@ export class BristolBoard<RootElementType extends UIElement> {
 
         this.canvas = new FHTML(document.createElement('canvas'));
         this.canvas.attr('oncontextmenu', 'return false');
+        this.canvas.element.style.background = 'transparent'
+        containerDivElem.style.background = 'transparent'
         this.containerDiv.append(this.canvas);
 
         this.ctx = this.canvas.element.getContext('2d');
@@ -795,7 +797,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.font.size = size;
         this.ctx.font = this.font.toString()
     }
-    fontFamily(family: BristolFontFamily) {
+    fontFamily(family: BristolFontFamily | string) {
         this.font.family = family;
         this.ctx.font = this.font.toString();
     }
@@ -879,8 +881,8 @@ export class BristolBoard<RootElementType extends UIElement> {
     onDraw(deltaMs: number): void {
         let ths = this;
         this.noStroke();
-        this.fillColor(fColor.grey.darken3);
-        this.ctx.fillRect(0, 0, this.getWidth(), this.getHeight());
+        // this.fillColor(fColor.grey.darken3);
+         this.ctx.clearRect(0, 0, this.getWidth(), this.getHeight());
 
         //this.targetFps = Interp.highFPSRequests > 0 ? 60 : 20;
         this.manageHighFpsRequests();
@@ -1112,7 +1114,7 @@ export class InteractionEventWatcher {
 export class BristolFont {
     style: BristolFontStyle = BristolFontStyle.Normal
     weight: BristolFontWeight | number = BristolFontWeight.normal;
-    family: BristolFontFamily = BristolFontFamily.Monospace;
+    family: BristolFontFamily | string = BristolFontFamily.Monospace;
     size: number = 12;
     toString() {
         return `${this.size}px ${this.family}`// ${this.style} ${this.weight}

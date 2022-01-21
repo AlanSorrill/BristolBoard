@@ -5,15 +5,15 @@ export class FColorSwath {
         this.lighten3 = FColor.fromHex(data['200']);
         this.lighten2 = FColor.fromHex(data['300']);
         this.lighten1 = FColor.fromHex(data['400']);
-        this.base =     FColor.fromHex(data['500']);
-        this.darken1 =  FColor.fromHex(data['600']);
-        this.darken2 =  FColor.fromHex(data['700']);
-        this.darken3 =  FColor.fromHex(data['800']);
-        this.darken4 =  FColor.fromHex(data['900']);
-        this.accent1 =  FColor.fromHex(data['a100'] ?? '#000');
-        this.accent2 =  FColor.fromHex(data['a200'] ?? '#000');
-        this.accent3 =  FColor.fromHex(data['a400'] ?? '#000');
-        this.accent4 =  FColor.fromHex(data['a700'] ?? '#000');
+        this.base = FColor.fromHex(data['500']);
+        this.darken1 = FColor.fromHex(data['600']);
+        this.darken2 = FColor.fromHex(data['700']);
+        this.darken3 = FColor.fromHex(data['800']);
+        this.darken4 = FColor.fromHex(data['900']);
+        this.accent1 = FColor.fromHex(data['a100'] ?? '#000');
+        this.accent2 = FColor.fromHex(data['a200'] ?? '#000');
+        this.accent3 = FColor.fromHex(data['a400'] ?? '#000');
+        this.accent4 = FColor.fromHex(data['a700'] ?? '#000');
     }
     lighten5: FColor;
     lighten4: FColor;
@@ -83,7 +83,7 @@ export class FColor {
         return (this.aa / this.total) * 255
     }
     get hasChanged(): boolean {
-        return this.oldStr == null;(this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
+        return this.oldStr == null; (this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
     }
     private genStr() {
         this.oldStr = `rgb${this.a != -1 ? 'a' : ''}(${this.r}, ${this.g}, ${this.b}${this.a != -1 ? (', ' + this.a) : ''})`;
@@ -96,16 +96,16 @@ export class FColor {
         }
         return this.oldStr;
     }
-    copy(){
+    copy() {
         return new FColor(this.rr, this.gg, this.bb, this.aa, this.total);
     }
     //opacity 0-255
-    setAlpha(a: number){
+    setAlpha(a: number) {
         this.aa = a
         return this;
     }
     //opacity 0-1
-    setOpacity(decimalPercent: number){
+    setOpacity(decimalPercent: number) {
         this.setAlpha(this.total * decimalPercent);
         return this;
     }
@@ -450,16 +450,18 @@ export class FColorDirectory {
             return FColor.fromHex(out);
         }
         let darkModeColorCount = 11;
-        var genCss = " ";
-        let cssElem: HTMLStyleElement = document.createElement('style');
+        if (typeof document != 'undefined') {
+            var genCss = " ";
+            let cssElem: HTMLStyleElement = document.createElement('style');
 
-        for (let i = 0; i <= darkModeColorCount; i++) {
-            this.darkMode[i] = getDarkModeColor(i);
-            genCss = genCss + `\n.darkBackground${i}{background-color: ${getDarkModeColor(i).toHexString()}}\n`;
+            for (let i = 0; i <= darkModeColorCount; i++) {
+                this.darkMode[i] = getDarkModeColor(i);
+                genCss = genCss + `\n.darkBackground${i}{background-color: ${getDarkModeColor(i).toHexString()}}\n`;
+            }
+            //let tst = //new DOMParser().parseFromString(`${genCss}</style>`, 'text/html')
+            cssElem.innerHTML = genCss;
+            document.querySelector('head').append(cssElem);
         }
-        //let tst = //new DOMParser().parseFromString(`${genCss}</style>`, 'text/html')
-        cssElem.innerHTML = genCss;
-        document.querySelector('head').append(cssElem);
         //$(`${genCss}</style>`).appendTo("head");
 
         let colorNames = Object.keys(FColorDirectory.materialColors);

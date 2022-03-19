@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2021",
+        "jsx": "react",
+        "target": "es6",
         "module": "commonjs",
         "declaration": true,
         "sourceMap": true,
@@ -8,6 +9,7 @@
         "watch": false,
         "esModuleInterop": true
     },
+    "lib": ["es2015"],
     "include": [
         "src"
     ],

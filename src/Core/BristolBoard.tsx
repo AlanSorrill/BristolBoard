@@ -1,5 +1,6 @@
 
 
+import React from "react";
 import { CoordTuple, isRawPointerMoveData, isRawPointerScrollData, lengthOfVector2d, LinkedList, LinkedTupleTools, MouseTapListener, RawPointerScrollData, TapTuple } from "..";
 import {
     LinkedTuple, PunctuationCharacter, RawPointerData, RawPointerMoveData, StringToKeyboardInputKey,
@@ -16,19 +17,28 @@ export interface DebugFlags {
     debugSelection: 'hover' | 'tilde',
     maxRecursionDepth: number
 }
+// export type FixProp<T, Key extends keyof T, Value extends T[Key]> = T & {[`key${Key}`]: Value}
 export type DebugFlagListener = (key: keyof DebugFlags) => void;
 
+export interface BristolBoard_Props<RootElementType extends UIElement> {
+    style: React.CSSProperties & { 'background': 'transparent' },
+    buildRootElement: (brist: BristolBoard<RootElementType>) => Promise<RootElementType>
+}
+export interface BristolBoard_State {
+    iWidth: number,
+    iHeight: number,
+    cursor: BristolCursor
+}
+export class BristolBoard<RootElementType extends UIElement> extends React.Component<BristolBoard_Props<RootElementType>, BristolBoard_State>{
 
-export class BristolBoard<RootElementType extends UIElement> {
-
-    containerDiv: FHTML<HTMLDivElement>;
-    canvas: FHTML<HTMLCanvasElement>;
+    containerDiv: React.RefObject<HTMLDivElement> = React.createRef();
+    canvasRef: React.RefObject<HTMLCanvasElement> = React.createRef();
 
 
     ctx: CanvasRenderingContext2D;
     mouseBtnsPressed: [boolean, boolean, boolean] = [false, false, false]
     // jobExecutor: JobExecutor = null;
-    //keyboardState: Map<string, boolean> = new Map()
+    //keyboardState: Map<string, boolean> = new Map()`
     deviceType: DeviceType;
     orientation: DeviceOrientation
     gesture: FGesture;
@@ -45,9 +55,10 @@ export class BristolBoard<RootElementType extends UIElement> {
     private debuggerFlagListeners: Array<DebugFlagListener> = []
 
 
-    constructor(containerDivElem: HTMLDivElement, buildRootElement: (brist: BristolBoard<RootElementType>) => Promise<RootElementType>) {
-
+    constructor(props: BristolBoard_Props<RootElementType>) {
+        super(props)
         let ths = this;
+        this.state = { iWidth: 10, iHeight: 10, cursor: BristolCursor.default }
         this.debuggerFlags = new Proxy({
             debugSelection: 'hover',
             debugUIFrame: false,
@@ -63,221 +74,255 @@ export class BristolBoard<RootElementType extends UIElement> {
         })
         this.deviceType = BristolBoard.getDeviceType();
         //this.uiElements = SortedLinkedList.Create((a: UIElement, b: UIElement) => (a.depth - b.depth));
-        this.containerDiv = new FHTML(containerDivElem);
+        // this.containerDiv = new FHTML(containerDivElem);
 
-        this.canvas = new FHTML(document.createElement('canvas'));
-        this.canvas.attr('oncontextmenu', 'return false');
-        this.canvas.element.style.background = 'transparent'
-        containerDivElem.style.background = 'transparent'
-        this.containerDiv.append(this.canvas);
+        // this.canvas = new FHTML(document.createElement('canvas'));
 
-        this.ctx = this.canvas.element.getContext('2d');
+
+
+
+    }
+    listeners: any
+
+    componentDidMount(): void {
+        console.log(this.canvasRef)
+        this.ctx = this.canvasRef.current.getContext('2d');
         // if (this.shouldExecJobs()) {
         //     this.jobExecutor = new JobExecutor();
         //     CerealBox.jobExecutor = this.jobExecutor;
         // }
-        this.canvas.element.addEventListener('resize', (event) => {
-            ths.onResize();
-        })
+        let ths = this;
+        this.listeners = {
+            "resize": (event) => {
+                ths.onResize();
+            },
+            "wheel": (evt: WheelEvent) => {
+                var parentOffset = ths.canvasRef.current.getBoundingClientRect();
+                //or $(this).offset(); if you really just want the current element's offset
+                var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+                var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+                if (relX >= 0 && relX <= parentOffset.left + ths.canvasRef.current.width * ths.resolutionScale &&
+                    relY >= 0 && relY <= parentOffset.top + ths.canvasRef.current.height * ths.resolutionScale) {
+                    let event: RawPointerScrollData = {
+                        action: InputEventAction.Scroll,
+                        amount: evt.deltaY > 0 ? 1 : -1,
+                        buttonOrFingerIndex: 0,
+                        position: [relX, relY],
+                        source: InputSource.Mouse,
+                        timeStamp: Date.now()
+                    }
+                    ths.handlePointerInput(event);
+                    // new MouseScrolledInputEvent(relX, relY, evt.deltaY > 0 ? 1 : -1);
+
+
+                    evt.preventDefault();
+
+
+                }
+            },
+            "orientationChange": function (event) {
+                console.log("The orientation of the screen is: ", screen.orientation);
+                ths.refreshOrientation();
+                let isGlitched = () => (ths.orientation == DeviceOrientation.landscape && ths.getWidth() < ths.getHeight()) || (ths.orientation == DeviceOrientation.portrait && ths.getWidth() > ths.getHeight())
+                let fixGlitches = () => {
+                    if (isGlitched()) {
+                        console.log("GLITCHED!!!")
+                        ths.onResize()
+                        this.setTimeout(() => fixGlitches(), 1);
+                    }
+                }
+                fixGlitches();
+
+                this.setTimeout(() => { }, 1)
+            },
+            "mouseMove": (evt: MouseEvent) => {
+                var parentOffset = ths.canvasRef.current.getBoundingClientRect();
+                //or $(this).offset(); if you really just want the current element's offset
+                var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+                var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+                let deltaX = relX - ths.iMouseX;
+                let deltaY = relY - ths.iMouseY;
+                ths.iMouseX = relX;
+                ths.iMouseY = relY;
+
+                let rawData: RawPointerMoveData = {
+                    position: [relX, relY],
+                    action: InputEventAction.Move,
+                    buttonOrFingerIndex: 1,
+                    source: InputSource.Mouse,
+                    timeStamp: Date.now(),
+                    delta: [deltaX, deltaY]
+                }
+                ths.handlePointerInput(rawData);
+
+                // for (let btnNumber = 0; btnNumber < ths.mouseBtnsPressed.length; btnNumber++) {
+                //     if (ths.mouseBtnsPressed[btnNumber]) {
+                //         let dragEvent = new MouseDraggedInputEvent(relX, relY, btnNumber, deltaX, deltaY);
+                //         if (ths.dragLockElement != null) {
+                //             if (!ths.dragLockElement.mouseDragged(dragEvent)) {
+                //                 ths.dragLockElement.onDragEnd(dragEvent);
+                //                 ths.dragLockElement = null;
+                //             } else {
+                //                 return;
+                //             }
+                //         }
+                //     }
+                // }
+                // let event = new MouseMovedInputEvent(relX, relY, deltaX, deltaY);
+
+
+
+
+                // if (this.mouseOverElement != null) {
+                //     if (!this.mouseOverElement.frame.containsPoint(relX, relY)) {
+                //         this.mouseOverElement.isMouseTarget = false;
+                //         this.mouseOverElement.mouseExit(event);
+                //         this.mouseOverElement = null;
+                //     } else {
+                //         return;
+                //     }
+                // }
+                // let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
+                // let currentElement: UIElement | (UIElement & MouseMovementListener)
+                // for (let i = 0; i < overElements.length; i++) {
+                //     currentElement = overElements[i]
+                //     if (UIElement.hasMouseMovementListener(currentElement)) {
+                //         if (currentElement.mouseMoved(event)) {
+                //             if (this.mouseOverElement != null) {
+                //                 this.mouseOverElement.mouseExit(event);
+                //             }
+                //             this.mouseOverElement = currentElement;
+                //             this.mouseOverElement.isMouseTarget = true;
+                //             this.mouseOverElement.mouseEnter(event);
+                //             evt.preventDefault();
+                //             break;
+                //         }
+                //     }
+                // }
+
+            },
+            "mouseDown": (evt: MouseEvent) => {
+                if (this.isFullscreen == false) {
+                    // this.fullscreen();
+                }
+                var parentOffset = ths.canvasRef.current.getBoundingClientRect();
+
+                var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+                var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+                if (relX >= 0 && relX <= parentOffset.left + ths.getWidth() &&
+                    relY >= 0 && relY <= parentOffset.top + ths.getHeight()) {
+
+                    let rawData: RawPointerData = {
+                        position: [relX, relY],
+                        action: InputEventAction.Down,
+                        buttonOrFingerIndex: evt.which,
+                        source: InputSource.Mouse,
+                        timeStamp: Date.now()
+                    }
+                    ths.handlePointerInput(rawData);
+
+
+                    // let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
+                    // let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
+                    // ths.mouseBtnsPressed[evt.which] = true;
+
+                    // let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
+
+                    // for (let i = 0; i < overElements.length; i++) {
+                    //     currentElement = overElements[i];
+                    //     if (UIElement.hasMouseDragListener(currentElement)) {
+                    //         if (currentElement.shouldDragLock(event)) {
+                    //             ths.dragLockElement = currentElement
+                    //         }
+                    //     }
+                    //     if (UIElement.hasMouseBtnListener(currentElement)) {
+                    //         log.naughty(`Checking mousePressed on ${currentElement.id}`)
+                    //         if (currentElement.mousePressed(event)) {
+                    //             break;
+                    //         }
+                    //     }
+
+                    // }
+                    evt.preventDefault();
+
+                }
+            },
+            "mouseUp": (evt: MouseEvent) => {
+                var parentOffset = ths.canvasRef.current.getBoundingClientRect();
+                //or $(this).offset(); if you really just want the current element's offset
+                var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
+                var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
+                if (relX >= 0 && relX <= parentOffset.left + ths.getWidth() &&
+                    relY >= 0 && relY <= parentOffset.top + ths.getHeight()) {
+                    let rawData: RawPointerData = {
+                        position: [relX, relY],
+                        action: InputEventAction.Up,
+                        buttonOrFingerIndex: evt.which,
+                        source: InputSource.Mouse,
+                        timeStamp: Date.now()
+                    }
+                    ths.handlePointerInput(rawData);
+
+
+                    // let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Up);
+                    // if (ths.dragLockElement != null) {
+                    //     ths.dragLockElement.onDragEnd(event);
+                    //     ths.dragLockElement = null;
+                    // }
+                    // let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+
+                    // let currentElement: UIElement | (UIElement & MouseBtnListener)
+                    // ths.mouseBtnsPressed[evt.which] = false;
+                    // for (let i = 0; i < overElements.length; i++) {
+                    //     currentElement = overElements[i];
+                    //     if (UIElement.hasMouseBtnListener(currentElement)) {
+                    //         log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
+                    //         if (currentElement.mouseReleased(event)) {
+                    //             break;
+                    //         }
+                    //     }
+                    // }
+                    evt.preventDefault();
+
+
+                }
+            },
+            "keydown": (ev: KeyboardEvent) => {
+                console.log(ev.key)
+                let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
+                this._pressedKeys.set(key, true);
+                if (key == PunctuationCharacter.BackTick) {
+                    console.log(`Saving ${ths.debugElem?.id} to bookmarks`);
+                    if (this.debuggerFlags.debugSelection == 'tilde') {
+                        ths.debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last;
+                    }
+                    ths.debugElementBookmarks.push(ths.debugElem)
+
+
+
+                }
+            },
+            "keyup": (ev: KeyboardEvent) => {
+                console.log(ev.key)
+                let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
+                this._pressedKeys.set(key, false);
+            }
+        };
+        this.canvasRef.current.addEventListener('resize', this.listeners.resize)
+
         this.onResize();
 
         this.lastDrawTime = Date.now();
-        this.canvas.element.addEventListener('wheel', (evt: WheelEvent) => {
-            var parentOffset = ths.canvas.offset();
-            //or $(this).offset(); if you really just want the current element's offset
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
-                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-                let event: RawPointerScrollData = {
-                    action: InputEventAction.Scroll,
-                    amount: evt.deltaY > 0 ? 1 : -1,
-                    buttonOrFingerIndex: 0,
-                    position: [relX, relY],
-                    source: InputSource.Mouse,
-                    timeStamp: Date.now()
-                }
-                ths.handlePointerInput(event);
-                // new MouseScrolledInputEvent(relX, relY, evt.deltaY > 0 ? 1 : -1);
-
-
-                evt.preventDefault();
-
-
-            }
-        })
+        this.canvasRef.current.addEventListener('wheel', this.listeners.wheel)
 
         setTimeout(() => ths.refreshOrientation(), 1);
-        window.addEventListener("orientationchange", function (event) {
-            console.log("The orientation of the screen is: ", screen.orientation);
-            ths.refreshOrientation();
-            let isGlitched = () => (ths.orientation == DeviceOrientation.landscape && ths.getWidth() < ths.getHeight()) || (ths.orientation == DeviceOrientation.portrait && ths.getWidth() > ths.getHeight())
-            let fixGlitches = () => {
-                if (isGlitched()) {
-                    console.log("GLITCHED!!!")
-                    ths.onResize()
-                    this.setTimeout(() => fixGlitches(), 1);
-                }
-            }
-            fixGlitches();
+        window.addEventListener("orientationchange", this.listeners.orientationChange);
 
-            this.setTimeout(() => { }, 1)
-        });
-
-        document.addEventListener('mousemove', (evt: MouseEvent) => {
-            var parentOffset = ths.canvas.offset();
-            //or $(this).offset(); if you really just want the current element's offset
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            let deltaX = relX - ths.iMouseX;
-            let deltaY = relY - ths.iMouseY;
-            ths.iMouseX = relX;
-            ths.iMouseY = relY;
-
-            let rawData: RawPointerMoveData = {
-                position: [relX, relY],
-                action: InputEventAction.Move,
-                buttonOrFingerIndex: 1,
-                source: InputSource.Mouse,
-                timeStamp: Date.now(),
-                delta: [deltaX, deltaY]
-            }
-            ths.handlePointerInput(rawData);
-
-            // for (let btnNumber = 0; btnNumber < ths.mouseBtnsPressed.length; btnNumber++) {
-            //     if (ths.mouseBtnsPressed[btnNumber]) {
-            //         let dragEvent = new MouseDraggedInputEvent(relX, relY, btnNumber, deltaX, deltaY);
-            //         if (ths.dragLockElement != null) {
-            //             if (!ths.dragLockElement.mouseDragged(dragEvent)) {
-            //                 ths.dragLockElement.onDragEnd(dragEvent);
-            //                 ths.dragLockElement = null;
-            //             } else {
-            //                 return;
-            //             }
-            //         }
-            //     }
-            // }
-            // let event = new MouseMovedInputEvent(relX, relY, deltaX, deltaY);
-
-
-
-
-            // if (this.mouseOverElement != null) {
-            //     if (!this.mouseOverElement.frame.containsPoint(relX, relY)) {
-            //         this.mouseOverElement.isMouseTarget = false;
-            //         this.mouseOverElement.mouseExit(event);
-            //         this.mouseOverElement = null;
-            //     } else {
-            //         return;
-            //     }
-            // }
-            // let overElements: (UIElement)[] = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
-
-            // let currentElement: UIElement | (UIElement & MouseMovementListener)
-            // for (let i = 0; i < overElements.length; i++) {
-            //     currentElement = overElements[i]
-            //     if (UIElement.hasMouseMovementListener(currentElement)) {
-            //         if (currentElement.mouseMoved(event)) {
-            //             if (this.mouseOverElement != null) {
-            //                 this.mouseOverElement.mouseExit(event);
-            //             }
-            //             this.mouseOverElement = currentElement;
-            //             this.mouseOverElement.isMouseTarget = true;
-            //             this.mouseOverElement.mouseEnter(event);
-            //             evt.preventDefault();
-            //             break;
-            //         }
-            //     }
-            // }
-
-        })
-        document.addEventListener('mousedown', (evt: MouseEvent) => {
-            if (this.isFullscreen == false) {
-                // this.fullscreen();
-            }
-            var parentOffset = ths.canvas.offset();
-
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
-                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-
-                let rawData: RawPointerData = {
-                    position: [relX, relY],
-                    action: InputEventAction.Down,
-                    buttonOrFingerIndex: evt.which,
-                    source: InputSource.Mouse,
-                    timeStamp: Date.now()
-                }
-                ths.handlePointerInput(rawData);
-
-
-                // let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
-                // let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
-                // ths.mouseBtnsPressed[evt.which] = true;
-
-                // let currentElement: UIElement | (UIElement & MouseBtnListener) | (UIElement & MouseDragListener)
-
-                // for (let i = 0; i < overElements.length; i++) {
-                //     currentElement = overElements[i];
-                //     if (UIElement.hasMouseDragListener(currentElement)) {
-                //         if (currentElement.shouldDragLock(event)) {
-                //             ths.dragLockElement = currentElement
-                //         }
-                //     }
-                //     if (UIElement.hasMouseBtnListener(currentElement)) {
-                //         log.naughty(`Checking mousePressed on ${currentElement.id}`)
-                //         if (currentElement.mousePressed(event)) {
-                //             break;
-                //         }
-                //     }
-
-                // }
-                evt.preventDefault();
-
-            }
-        })
-        document.addEventListener('mouseup', (evt: MouseEvent) => {
-            var parentOffset = ths.canvas.offset();
-            //or $(this).offset(); if you really just want the current element's offset
-            var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
-            var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
-            if (relX >= 0 && relX <= parentOffset.left + ths.canvas.width * ths.resolutionScale &&
-                relY >= 0 && relY <= parentOffset.top + ths.canvas.height * ths.resolutionScale) {
-                let rawData: RawPointerData = {
-                    position: [relX, relY],
-                    action: InputEventAction.Up,
-                    buttonOrFingerIndex: evt.which,
-                    source: InputSource.Mouse,
-                    timeStamp: Date.now()
-                }
-                ths.handlePointerInput(rawData);
-
-
-                // let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Up);
-                // if (ths.dragLockElement != null) {
-                //     ths.dragLockElement.onDragEnd(event);
-                //     ths.dragLockElement = null;
-                // }
-                // let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
-
-                // let currentElement: UIElement | (UIElement & MouseBtnListener)
-                // ths.mouseBtnsPressed[evt.which] = false;
-                // for (let i = 0; i < overElements.length; i++) {
-                //     currentElement = overElements[i];
-                //     if (UIElement.hasMouseBtnListener(currentElement)) {
-                //         log.naughty(`Checking mouseReleased on ${overElements[i].id}`)
-                //         if (currentElement.mouseReleased(event)) {
-                //             break;
-                //         }
-                //     }
-                // }
-                evt.preventDefault();
-
-
-            }
-        })
-        this.gesture = new FGesture(this.canvas, {
+        document.addEventListener('mousemove', this.listeners.mouseMove)
+        document.addEventListener('mousedown', this.listeners.mouseDown)
+        document.addEventListener('mouseup', this.listeners.mouseUp)
+        this.gesture = new FGesture(this.canvasRef.current, {
             onTouchStart: (index: number, pos: Coordinate) => {
                 if (this.isFullscreen == false && ths.deviceType != DeviceType.Desktop && this.fullscreenOnTouch) {
                     this.fullscreen();
@@ -359,26 +404,8 @@ export class BristolBoard<RootElementType extends UIElement> {
             //     }
             // }
         });
-        document.addEventListener('keydown', (ev: KeyboardEvent) => {
-            console.log(ev.key)
-            let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
-            this._pressedKeys.set(key, true);
-            if (key == PunctuationCharacter.BackTick) {
-                console.log(`Saving ${ths.debugElem?.id} to bookmarks`);
-                if (this.debuggerFlags.debugSelection == 'tilde') {
-                    ths.debugElem = this.rootElement.findElementsUnderCursor(this.mouseX, this.mouseY).last;
-                }
-                ths.debugElementBookmarks.push(ths.debugElem)
-
-
-
-            }
-        })
-        document.addEventListener('keyup', (ev: KeyboardEvent) => {
-            console.log(ev.key)
-            let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
-            this._pressedKeys.set(key, false);
-        })
+        document.addEventListener('keydown', this.listeners.keydown)
+        document.addEventListener('keyup', this.listeners.keyup)
         // this.canvas.on('keydown', (event: JQuery.KeyDownEvent<HTMLCanvasElement, null, HTMLCanvasElement, HTMLCanvasElement>)=>{
         //     return ths.keyDown(event);
         // })
@@ -386,13 +413,19 @@ export class BristolBoard<RootElementType extends UIElement> {
         //     return ths.keyUp(event);
         // })
 
-        buildRootElement(this).then((rootElem: RootElementType) => {
+        this.props.buildRootElement(this).then((rootElem: RootElementType) => {
             if (ths.rootElement == null) {
                 ths.rootElement = rootElem;
             }
             ths.draw();
         })
+    }
 
+    render() {
+        return <div ref={this.containerDiv} style={this.props.style}>
+            <canvas ref={this.canvasRef} width={this.state.iWidth * this.resolutionScale} height={this.state.iHeight * this.resolutionScale} style={{ background: 'transparent', width: '100%', height: '100%', cursor: this.state.cursor }} onContextMenu={() => (false)} />
+
+        </div>
     }
 
     public interactionEvents: InteractionEventWatcher[] = [];
@@ -406,7 +439,7 @@ export class BristolBoard<RootElementType extends UIElement> {
             this.interactionEvents.push(new InteractionEventWatcher(this));
         }
         this.interactionEvents[rawData.buttonOrFingerIndex].addInteraction(rawData);
-       
+
         // switch (rawData.action) {
         //     case InputEventAction.Down:
         //     case InputEventAction.Up:
@@ -525,13 +558,13 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
     autoFrames: boolean = true;
     getWidth() {
-        return this.iWidth * this.resolutionScale;
+        return this.state.iWidth * this.resolutionScale;
     }
     getHeight() {
-        return this.iHeight * this.resolutionScale;
+        return this.state.iHeight * this.resolutionScale;
     }
-    private iWidth: number;
-    private iHeight: number;
+    // private iWidth: number;
+    // private iHeight: number;
     private iMouseX: number;
     private iMouseY: number;
     get mouseX(): number {
@@ -542,12 +575,12 @@ export class BristolBoard<RootElementType extends UIElement> {
     }
     public resolutionScale: number = 2;
     private onResize() {
-        this.iWidth = this.containerDiv.width;
-        this.iHeight = this.containerDiv.height;
-        this.canvas.element.width = this.iWidth * this.resolutionScale;
-        this.canvas.element.height = this.iHeight * this.resolutionScale;
-        this.canvas.setCss('width', `${this.iWidth}px`);
-        this.canvas.setCss('height', `${this.iHeight}px`);
+
+        this.setState({ iWidth: this.containerDiv.current?.clientWidth || 10, iHeight: this.containerDiv.current?.clientHeight || 10 })
+        // this.canvas.current.width = this.iWidth * this.resolutionScale;
+        // this.canvas.current.height = this.iHeight * this.resolutionScale;
+        // this.canvas.current.style.setCss('width', `${this.iWidth}px`);
+        // this.canvas.setCss('height', `${this.iHeight}px`);
     }
     refreshOrientation() {
         let type: DeviceOrientation = screen.orientation.type.split('-')[0] as DeviceOrientation;
@@ -721,7 +754,8 @@ export class BristolBoard<RootElementType extends UIElement> {
         this.ctx.lineWidth = weight;
     }
     cursor(cursorCss: BristolCursor) {
-        this.canvas.setCss('cursor', cursorCss);
+        this.setState({})
+        this.setState({ cursor: cursorCss });
     }
     background(color: FColor) {
         this.noStroke();
@@ -882,7 +916,7 @@ export class BristolBoard<RootElementType extends UIElement> {
         let ths = this;
         this.noStroke();
         // this.fillColor(fColor.grey.darken3);
-         this.ctx.clearRect(0, 0, this.getWidth(), this.getHeight());
+        this.ctx.clearRect(0, 0, this.getWidth(), this.getHeight());
 
         //this.targetFps = Interp.highFPSRequests > 0 ? 60 : 20;
         this.manageHighFpsRequests();

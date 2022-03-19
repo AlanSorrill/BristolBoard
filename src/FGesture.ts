@@ -10,10 +10,10 @@ export interface FGesture_Listeners {
     onDrag: (index: number,position: Coordinate, delta: Coordinate) => void
 }
 export class FGesture {
-    element: FHTML<any>;
+    element: HTMLElement;
     touchPoints: TouchPoint[] = [null,null,null,null]
     listeners: FGesture_Listeners;
-    constructor(element: FHTML<any>, listeners: FGesture_Listeners) {
+    constructor(element: HTMLElement, listeners: FGesture_Listeners) {
         this.element = element
         this.listeners = listeners;
         let ths = this;

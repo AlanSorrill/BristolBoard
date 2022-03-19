@@ -36,6 +36,7 @@ String.prototype.replaceAt = function(index: number, textToInsert: string) {
 }
 
 Map.prototype.toArray = function <K, V>() {
+    if(this == null || (this as Map<K,V>).size == 0){return []}
     let out: V[] = [];
     (this as Map<K, V>).forEach((val: V, key: K) => {
         out.push(val);

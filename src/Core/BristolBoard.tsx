@@ -58,6 +58,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     constructor(props: BristolBoard_Props<RootElementType>) {
         super(props)
         let ths = this;
+
         this.state = { iWidth: 10, iHeight: 10, cursor: BristolCursor.default }
         this.debuggerFlags = new Proxy({
             debugSelection: 'hover',
@@ -422,9 +423,12 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     }
 
     render() {
-        return <div ref={this.containerDiv} style={this.props.style}>
-            <canvas ref={this.canvasRef} width={this.state.iWidth * this.resolutionScale} height={this.state.iHeight * this.resolutionScale} style={{ background: 'transparent', width: '100%', height: '100%', cursor: this.state.cursor }} onContextMenu={() => (false)} />
 
+        return <div ref={this.containerDiv} style={this.props.style}>
+            <div style={{width: '100%', height: '100%', position: 'relative'}}>
+            <canvas ref={this.canvasRef} width={this.state.iWidth * this.resolutionScale} height={this.state.iHeight * this.resolutionScale} style={{position: 'absolute', background: 'transparent', width: this.containerDiv.current?.clientWidth || 10, height: this.containerDiv.current?.clientHeight || 10, cursor: this.state.cursor }} onContextMenu={() => (false)} />
+
+            </div>
         </div>
     }
 
@@ -468,7 +472,8 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
         // }
     }
     getElementsUnderTouch(rawData: RawPointerData) {
-        return this.rootElement?.findElementsUnderCursor(rawData.position[0], rawData.position[1]).sort((a: UIElement, b: UIElement) => (a.depth - b.depth)) ?? [];
+        let tmp = this.rootElement?.findElementsUnderCursor(rawData.position[0], rawData.position[1])
+        return tmp.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
     }
     getKeys() {
         return this._pressedKeys.toArrayWithKeys();
@@ -575,8 +580,12 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     }
     public resolutionScale: number = 2;
     private onResize() {
-
+        console.log(`Measuring resize (${this.containerDiv.current?.clientWidth} x ${this.containerDiv.current?.clientHeight}) at scale ${this.resolutionScale}--------------------------------------------------------------------------------------------------------`)
         this.setState({ iWidth: this.containerDiv.current?.clientWidth || 10, iHeight: this.containerDiv.current?.clientHeight || 10 })
+        if (this.canvasRef.current) {
+            this.canvasRef.current.width = (this.containerDiv.current?.clientWidth || 10) * this.resolutionScale
+            this.canvasRef.current.height = (this.containerDiv.current?.clientHeight || 10) * this.resolutionScale
+        }
         // this.canvas.current.width = this.iWidth * this.resolutionScale;
         // this.canvas.current.height = this.iHeight * this.resolutionScale;
         // this.canvas.current.style.setCss('width', `${this.iWidth}px`);
@@ -844,12 +853,13 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     }
     rect(x: number, y: number, w: number, h: number, stroke: boolean = true, fill: boolean = false) {
         this.ctx.rect(x, y, w, h)
-        if (stroke) {
-            this.ctx.stroke();
-        }
         if (fill) {
             this.ctx.fill();
         }
+        if (stroke) {
+            this.ctx.stroke();
+        }
+        
     }
     ellipseFrame(frame: UIFrameResult | UIFrame, stroke: boolean = true, fill: boolean = false) {
         if (frame instanceof UIFrame) {
@@ -913,6 +923,9 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     debugElementBookmarks: UIElement[] = [];
     debugElem: UIElement = null;
     onDraw(deltaMs: number): void {
+        if (this.state.iWidth != this.containerDiv.current?.clientWidth) {
+            this.onResize()
+        }
         let ths = this;
         this.noStroke();
         // this.fillColor(fColor.grey.darken3);

@@ -5,12 +5,16 @@ import { LocalLogger, LogFunction, Logger, LoggerFilterResult, LogLevel, LogLeve
 
 let logger = new Logger();
 export { logger, LogLevel, LoggerFilterResult, LocalLogger, LogLevelMap, LogFunction}
-import { FColor, FColorDirectory, FColorSwath } from './FColor';
+import { ensureFColor, FColor, FColorDirectory, FColorSwath } from './FColor';
 let fColor = new FColorDirectory();
 export { FColor, fColor, FColorSwath, FColorDirectory }
 
+export function ensureBristolImports(){
+    console.log()
+    ensureFColor()
+}
 
-export * from './Core/UIElement'
+export * from './Core/UIElement' 
 export * from './Core/UIFrame'
 export * from './FHTML'
 export * from './FColor'

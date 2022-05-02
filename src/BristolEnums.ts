@@ -60,6 +60,8 @@ export enum BristolCursor {
     copy = "copy",
     move = "move",
     noDrop = "no-drop",
+    grab = "grab",
+    grabbing = 'grabbing',
     notAllowed = "not-allowed",
     allScroll = "all-scroll",
     colResize = "col-resize",

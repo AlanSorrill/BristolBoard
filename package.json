@@ -25,9 +25,8 @@
     "homepage": "https://github.com/AlanSorrill/BristolBoard#readme",
     "devDependencies": {
         "@types/hammerjs": "^2.0.40",
-        "@types/react": "^17.0.40",
-        "@types/react-dom": "^17.0.13",
-        "typescript": "^4.4.2"
+        "@types/react": "^17.0.44",
+        "@types/react-dom": "^17.0.13"
     },
     "files": [
         "lib/**/*"
@@ -37,6 +36,7 @@
         "hammerjs": "^2.0.8",
         "react": "^17.0.2",
         "react-dom": "^17.0.2",
+        "typescript": "^4.6.4",
         "url-parse": "^1.5.3"
     }
 }

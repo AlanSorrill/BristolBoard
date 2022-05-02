@@ -1,6 +1,6 @@
 
 import { InteractionEventWatcher } from '..';
-import { FColor, logger, UIFrameDescription, UIFrameResult, LinkedList, KeyboardInputEvent, UIFrame, fColor, BristolBoard, IsType, RawPointerMoveData, RawPointerData } from '../BristolImports'
+import { FColor, logger, UIFrameDescription, UIFrameResult, LinkedList, KeyboardInputEvent, UIFrame, fColor, BristolBoard, IsType, RawPointerMoveData, RawPointerData, RawPointerScrollData } from '../BristolImports'
 let log = logger.local('UIElement')
 
 export abstract class UIElement {
@@ -327,7 +327,7 @@ export interface KeyListener {
     keyReleased(evt: KeyboardInputEvent): boolean
 }
 export interface MouseWheelListener {
-    mouseWheel(delta: RawPointerData): boolean
+    mouseWheel(delta: RawPointerScrollData): boolean
 }
 // export interface MouseBtnListener {
 //     mousePressed(evt: RawPointerData): boolean

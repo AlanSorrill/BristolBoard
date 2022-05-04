@@ -519,9 +519,10 @@ export class FColorDirectory {
         }
     }
     updateProceduralCss() {
+        if(this.cssElement == null){return}
         this.cssElement.innerHTML = this.proceduralCss.join('\n');
     }
-    constructor() {
+    constructor() { 
         //          0  1   2   3   4   5   6   7   8   9   10  11
         let dmcs = [0, 15, 20, 25, 30, 34, 38, 42, 47, 54, 60, 70];
         let getDarkModeColor = (i) => {
@@ -682,8 +683,10 @@ declare global {
     var fColor: FColorDirectory
 }
 export function ensureFColor() {
-    if (window) {
+    try{
+    if (typeof window != 'undefined') {
         window['fColor'] = new FColorDirectory()
     }
+}catch(err){}
 }
 ensureFColor()

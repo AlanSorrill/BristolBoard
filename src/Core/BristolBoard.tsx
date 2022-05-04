@@ -600,8 +600,8 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
         return 1;
     }
     static noStyle: string = ''
-    strokeColor(style: FColor) {
-        this.ctx.strokeStyle = style?.toHexString() ?? '#000000';
+    strokeColor(style: FColor | string) {
+        this.ctx.strokeStyle = typeof style == 'string' ? style : style?.toHexString() ?? '#000000';
     }
     roundedRect(x: number, y: number, w: number, h: number, rad: number | CornerRadius) {
         if (typeof rad == 'number') {

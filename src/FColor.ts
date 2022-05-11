@@ -63,6 +63,9 @@ export class FColor {
     }
 
     static fromHex(colorHex: string, swatchName: string, name: string) {
+        if(typeof colorHex == 'undefined'){
+            return fColor.white
+        }
         colorHex = colorHex.replaceAll('#', '').replaceAll(' ', '');
 
         let r = parseInt(colorHex.substr(0, 2), 16);

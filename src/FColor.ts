@@ -539,13 +539,14 @@ export class FColorDirectory {
             return FColor.fromHex(out, 'darkMode', i + '');
         }
         let darkModeColorCount = 11;
-        if (typeof document != 'undefined') {
+        if (typeof window != 'undefined') {
             var genCss = " ";
             let cssElem: HTMLStyleElement = document.createElement('style');
 
             for (let i = 0; i <= darkModeColorCount; i++) {
                 this.darkMode[i] = getDarkModeColor(i);
-                genCss = genCss + `\n.darkBackground${i}{background-color: ${getDarkModeColor(i).toHexString()}}\n`;
+                this.addCss(`\n.darkBackground${i}{background-color: ${getDarkModeColor(i).toHexString()}}\n.hover-darkMode-${i}:hover {background-color: ${getDarkModeColor(i).toHexString()} !important}\n`, false);
+                // genCss = genCss + ``;
             }
             //let tst = //new DOMParser().parseFromString(`${genCss}</style>`, 'text/html')
             cssElem.innerHTML = genCss;

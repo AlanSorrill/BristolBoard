@@ -8,7 +8,7 @@ declare global {
     }
     interface Map<K, V> {
         toArray(): V[]
-        toArrayWithKeys(): Array<[key: K,value: V]>
+        toArrayWithKeys(): Array<[key: K, value: V]>
     }
     interface Array<T> {
         pushAll(arr: T[]): void;
@@ -31,12 +31,12 @@ export function IsType<T>(target: any, memberName: keyof T): target is T {
 export type optFunc<T> = (T | (() => T));
 export type optTransform<I, O> = (O | ((input: I) => O)) | { t: string, v: optTransform<I, O> };
 
-String.prototype.replaceAt = function(index: number, textToInsert: string) {
+String.prototype.replaceAt = function (index: number, textToInsert: string) {
     return this.substr(0, index) + textToInsert + this.substr(index + textToInsert.length);
 }
 
 Map.prototype.toArray = function <K, V>() {
-    if(this == null || (this as Map<K,V>).size == 0){return []}
+    if (this == null || (this as Map<K, V>).size == 0) { return [] }
     let out: V[] = [];
     (this as Map<K, V>).forEach((val: V, key: K) => {
         out.push(val);
@@ -44,13 +44,13 @@ Map.prototype.toArray = function <K, V>() {
     return out;
 }
 Map.prototype.toArrayWithKeys = function <K, V>() {
-    let out: Array<[key: K,value: V]> = [];
+    let out: Array<[key: K, value: V]> = [];
     (this as Map<K, V>).forEach((val: V, key: K) => {
-        out.push([key,val]);
+        out.push([key, val]);
     })
     return out;
 }
-Array.prototype.random = function <T>(){
+Array.prototype.random = function <T>() {
     return this[Math.round(Math.random() * (this.length - 1))]
 }
 Array.prototype.toSubArrays = function <T>(subArrayLength: number): Array<T>[] {
@@ -125,9 +125,11 @@ export function removeCammelCase(input: string): string {
     }
     return out.join('');
 }
-// String.prototype.replaceAll = function (a: string, b: string) {
-//     return this.split(a).join(b);
-// };
+if (typeof String.prototype.replaceAll != 'function') {
+    String.prototype.replaceAll = function (a: string, b: string) {
+        return this.split(a).join(b);
+    };
+}
 export function isNumber(input: number | string) {
     return !isNaN(input as any)
 }

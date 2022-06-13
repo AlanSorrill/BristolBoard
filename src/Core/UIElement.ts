@@ -37,6 +37,16 @@ export abstract class UIElement {
         }
     }
 
+    unmount(){
+        this.onUnmount();
+        this.childElements.forEach((item)=>{
+            item.unmount()
+        })
+    }
+    onUnmount(){
+
+    }
+
     // get mouseState(): MouseState {
     //     let downIndicies: number[] = [];
     //     let hover: boolean = false;
@@ -218,6 +228,7 @@ export abstract class UIElement {
     removeFromParent() {
         if (this.parent instanceof UIElement) {
             this.onRemoveFromParent();
+            this.unmount()
             this.parent.removeChild(this.id);
         } else {
             throw new Error(`Cannot remove root element ${this.id}`)

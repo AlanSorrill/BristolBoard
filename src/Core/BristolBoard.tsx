@@ -89,7 +89,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
         console.log(this.canvasRef)
         this.ctx = this.canvasRef.current.getContext('2d');
         // if (this.shouldExecJobs()) {
-        //     this.jobExecutor = new JobExecutor();
+        //     this.jobExecutor = new JobExecutor(); 
         //     CerealBox.jobExecutor = this.jobExecutor;
         // }
         let ths = this;
@@ -98,6 +98,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 ths.onResize();
             },
             "wheel": (evt: WheelEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, evt);
+                    return;
+                }
                 var parentOffset = ths.canvasRef.current.getBoundingClientRect();
                 //or $(this).offset(); if you really just want the current element's offset
                 var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
@@ -137,6 +141,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 this.setTimeout(() => { }, 1)
             },
             "mouseMove": (evt: MouseEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, evt);
+                    return;
+                }
                 var parentOffset = ths.canvasRef.current.getBoundingClientRect();
                 //or $(this).offset(); if you really just want the current element's offset
                 var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
@@ -204,6 +212,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
 
             },
             "mouseDown": (evt: MouseEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, evt);
+                    return;
+                }
                 if (this.isFullscreen == false) {
                     // this.fullscreen();
                 }
@@ -250,6 +262,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 }
             },
             "mouseUp": (evt: MouseEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, evt);
+                    return;
+                }
                 var parentOffset = ths.canvasRef.current.getBoundingClientRect();
                 //or $(this).offset(); if you really just want the current element's offset
                 var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
@@ -290,6 +306,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 }
             },
             "keydown": (ev: KeyboardEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, ev);
+                    return;
+                }
                 console.log(ev.key)
                 let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
                 this._pressedKeys.set(key, true);
@@ -305,6 +325,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 }
             },
             "keyup": (ev: KeyboardEvent) => {
+                if (!ths.canvasRef?.current) {
+                    console.log(`No canvas element for event`, ev);
+                    return;
+                }
                 console.log(ev.key)
                 let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
                 this._pressedKeys.set(key, false);
@@ -421,12 +445,16 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
             ths.draw();
         })
     }
-
+    componentWillUnmount(): void {
+        console.log(`Bristol unmounting`)
+        debugger
+        this.rootElement.unmount();
+    }
     render() {
 
         return <div ref={this.containerDiv} style={this.props.style}>
-            <div style={{width: '100%', height: '100%', position: 'relative'}}>
-            <canvas ref={this.canvasRef} width={this.state.iWidth * this.resolutionScale} height={this.state.iHeight * this.resolutionScale} style={{position: 'absolute', background: 'transparent', width: this.containerDiv.current?.clientWidth || 10, height: this.containerDiv.current?.clientHeight || 10, cursor: this.state.cursor }} onContextMenu={() => (false)} />
+            <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                <canvas ref={this.canvasRef} width={this.state.iWidth * this.resolutionScale} height={this.state.iHeight * this.resolutionScale} style={{ position: 'absolute', background: 'transparent', width: this.containerDiv.current?.clientWidth || 10, height: this.containerDiv.current?.clientHeight || 10, cursor: this.state.cursor }} onContextMenu={() => (false)} />
 
             </div>
         </div>
@@ -859,7 +887,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
         if (stroke) {
             this.ctx.stroke();
         }
-        
+
     }
     ellipseFrame(frame: UIFrameResult | UIFrame, stroke: boolean = true, fill: boolean = false) {
         if (frame instanceof UIFrame) {

@@ -118,7 +118,8 @@ export class FColor {
         return this.oldStr == null; (this.oldVals[0] != this.r) || (this.oldVals[1] != this.g) || (this.oldVals[2] != this.b) || (this.oldVals[3] != this.a);
     }
     private genStr() {
-        this.oldStr = `rgb${this.a != -1 ? 'a' : ''}(${this.r}, ${this.g}, ${this.b}${this.a != -1 ? (', ' + this.a) : ''})`;
+        this.oldStr = this.toRealHex()
+        // this.oldStr = `rgb${this.a != -1 ? 'a' : ''}(${this.r}, ${this.g}, ${this.b}${this.a != -1 ? (', ' + this.a) : ''})`;
     }
     private oldStr: string = null;
     private oldVals: [number, number, number, number] = [-1, -1, -1, -1];
@@ -135,6 +136,12 @@ export class FColor {
     }
     toHexStringAlpha(a: number) {
         return `rgba(${this.r}, ${this.g}, ${this.b}, ${a})`
+    }
+    toRealHex(){
+        if(this.a != -1){
+            return `#${this.r.toString(16)}${this.g.toString(16)}${this.b.toString(16)}${this.a.toString(16)}`
+        }
+        return `#${this.r.toString(16)}${this.g.toString(16)}${this.b.toString(16)}`
     }
 
     copy() {
@@ -589,7 +596,7 @@ export class FColorDirectory {
                             break;
                         case "600":
                             englishLabel = "darken1";
-                            break;
+                            break; 
                         case "700":
                             englishLabel = "darken2";
                             break;
@@ -610,7 +617,7 @@ export class FColorDirectory {
                             break;
                         case "a700":
                             englishLabel = "accent4";
-                            break;
+                            break; 
                         default:
                             englishLabel = colorLabels[j];
                     }
@@ -625,6 +632,10 @@ export class FColorDirectory {
                 this.addCss(`.hover-${colorNames[i]}-${englishLabel}:hover {background-color: ${currentColor ?? "#ff00ff"} !important}`, false);
             }
         }
+        let ths = this;
+//         this.darkMode.forEach((darkColor)=>{
+// ths.addCss(`.${darkColor.hoverCssClass}:hover {background-color: ${darkColor.toRealHex()} !important}`)
+//         })
         this.updateProceduralCss();
     }
     toJson(colorMode: ColorMode = 'hexString') {
@@ -679,7 +690,7 @@ export class FColorDirectory {
 
     createCssHoverClass(className: string, hoverBackground: FColor) {
         //this.addCss(`.${className} {background-color: ${hoverBackground.toHexString()} !important}`)
-        this.addCss(`.${className}:hover {background-color: ${hoverBackground.toHexString()} !important}`)
+        this.addCss(`.${className}:hover {background-color: ${hoverBackground.toRealHex()} !important}`)
     }
 }
 
@@ -688,7 +699,7 @@ declare global {
 }
 export function ensureFColor() {
     try{
-    if (typeof window != 'undefined') {
+    if (typeof window != 'undefined' && typeof window['fColor'] == 'undefined') {
         window['fColor'] = new FColorDirectory()
     }
 }catch(err){}

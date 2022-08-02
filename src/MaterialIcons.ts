@@ -9,6 +9,7 @@ export enum MaterialIcon {
     account_box = "account_box",
     account_circle = "account_circle",
     add_shopping_cart = "add_shopping_cart",
+    token = "token",
     add_task = "add_task",
     add_to_drive = "add_to_drive",
     addchart = "addchart",

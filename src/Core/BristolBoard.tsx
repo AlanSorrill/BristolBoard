@@ -27,7 +27,7 @@ export interface BristolBoard_Props<RootElementType extends UIElement> {
 export interface BristolBoard_State {
     iWidth: number,
     iHeight: number,
-    cursor: BristolCursor
+    cursor: BristolCursor 
 }
 export class BristolBoard<RootElementType extends UIElement> extends React.Component<BristolBoard_Props<RootElementType>, BristolBoard_State>{
 
@@ -447,7 +447,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     }
     componentWillUnmount(): void {
         console.log(`Bristol unmounting`)
-        debugger
+        // debugger
         this.rootElement.unmount();
     }
     render() {
@@ -821,7 +821,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
             xm = cornerX + w / 2,       // x-middle
             ym = cornerY + h / 2;       // y-middle
 
-        this.ctx.beginPath();
+        // this.ctx.beginPath();
         this.ctx.moveTo(cornerX, ym);
         this.ctx.bezierCurveTo(cornerX, ym - oy, xm - ox, cornerY, xm, cornerY);
         this.ctx.bezierCurveTo(xm + ox, cornerY, xe, ym - oy, xe, ym);

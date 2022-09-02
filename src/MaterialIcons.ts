@@ -1,4 +1,5 @@
 export enum MaterialIcon {
+    database = "database",
     threed_rotation = "3d_rotation",
     accessibility = "accessibility",
     accessibility_new = "accessibility_new",

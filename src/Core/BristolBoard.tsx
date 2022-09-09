@@ -85,6 +85,10 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
     }
     listeners: any
 
+    private isTopElementAt(x: number, y: number){
+        let elems = document.elementFromPoint(x,y)
+        return elems.nodeName.toLowerCase() == 'canvas'
+    }
     componentDidMount(): void {
         console.log(this.canvasRef)
         this.ctx = this.canvasRef.current.getContext('2d');
@@ -224,7 +228,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
                 var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
                 if (relX >= 0 && relX <= parentOffset.left + ths.getWidth() &&
-                    relY >= 0 && relY <= parentOffset.top + ths.getHeight()) {
+                    relY >= 0 && relY <= parentOffset.top + ths.getHeight() && ths.isTopElementAt(evt.clientX, evt.clientY)) {
 
                     let rawData: RawPointerData = {
                         position: [relX, relY],
@@ -235,6 +239,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                     }
                     ths.handlePointerInput(rawData);
 
+                    console.log('Elements:',document.elementsFromPoint(evt.clientX, evt.clientY))
 
                     // let overElements = ths.rootElement?.findElementsUnderCursor(relX, relY)?.sort((a: UIElement, b: UIElement) => (b.depth - a.depth)) ?? [];
                     // let event = new MouseBtnInputEvent(relX, relY, evt.which, InputEventAction.Down);
@@ -257,6 +262,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                     //     }
 
                     // }
+
                     evt.preventDefault();
 
                 }
@@ -271,7 +277,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                 var relX = (evt.pageX - parentOffset.left) * ths.resolutionScale;
                 var relY = (evt.pageY - parentOffset.top) * ths.resolutionScale;
                 if (relX >= 0 && relX <= parentOffset.left + ths.getWidth() &&
-                    relY >= 0 && relY <= parentOffset.top + ths.getHeight()) {
+                    relY >= 0 && relY <= parentOffset.top + ths.getHeight() && ths.isTopElementAt(evt.clientX, evt.clientY)) {
                     let rawData: RawPointerData = {
                         position: [relX, relY],
                         action: InputEventAction.Up,
@@ -607,7 +613,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
         return this.iMouseY;
     }
     public resolutionScale: number = 2;
-    private onResize() {
+    onResize() {
         console.log(`Measuring resize (${this.containerDiv.current?.clientWidth} x ${this.containerDiv.current?.clientHeight}) at scale ${this.resolutionScale}--------------------------------------------------------------------------------------------------------`)
         this.setState({ iWidth: this.containerDiv.current?.clientWidth || 10, iHeight: this.containerDiv.current?.clientHeight || 10 })
         if (this.canvasRef.current) {

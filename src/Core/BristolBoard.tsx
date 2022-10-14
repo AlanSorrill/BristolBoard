@@ -780,12 +780,12 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
             }
         }
     }
-    fillColor(style: FColor) {
+    fillColor(style: FColor | string) {
         if (style == null) {
             this.ctx.fillStyle = BristolBoard.noStyle;
             return;
         }
-        this.ctx.fillStyle = style.toHexString();
+        this.ctx.fillStyle = typeof style == 'string' ? style : style?.toHexString() ?? '#000000'
     }
     noStroke() {
         this.ctx.strokeStyle = BristolBoard.noStyle;

@@ -4,7 +4,7 @@ import { lerp } from "./BristolImports";
 export type ColorMode = 'hsv' | 'rgb' | 'hexString'
 export class FColorSwath {
     constructor(data: any, swatchName: string) {
-        
+
         this.lighten4 = FColor.fromHex(data['100'], swatchName, 'lighten4');
         this.lighten3 = FColor.fromHex(data['200'], swatchName, 'lighten3');
         this.lighten2 = FColor.fromHex(data['300'], swatchName, 'lighten2');
@@ -19,7 +19,7 @@ export class FColorSwath {
         this.accent3 = FColor.fromHex(data['a400'] ?? '#000', swatchName, 'accent3');
         this.accent4 = FColor.fromHex(data['a700'] ?? '#000', swatchName, 'accent4');
     }
-    
+
     lighten5: FColor;
     lighten4: FColor;
     lighten3: FColor;
@@ -36,7 +36,7 @@ export class FColorSwath {
     accent4: FColor;
 
     randomColor(): FColor {
-        let keys = Object.keys(this).filter((name)=>(name != 'randomColor'))
+        let keys = Object.keys(this).filter((name) => (name != 'randomColor'))
         return this[keys[Math.round(Math.random() * (keys.length - 1))]]
     }
 }
@@ -63,7 +63,7 @@ export class FColor {
     }
 
     static fromHex(colorHex: string, swatchName: string, name: string) {
-        if(typeof colorHex == 'undefined'){
+        if (typeof colorHex == 'undefined') {
             return fColor.white
         }
         colorHex = colorHex.replaceAll('#', '').replaceAll(' ', '');
@@ -137,11 +137,12 @@ export class FColor {
     toHexStringAlpha(a: number) {
         return `rgba(${this.r}, ${this.g}, ${this.b}, ${a})`
     }
-    toRealHex(){
-        if(this.a != -1){
-            return `#${this.r.toString(16)}${this.g.toString(16)}${this.b.toString(16)}${this.a.toString(16)}`
+    toRealHex() {
+        let leadingZero = (str: string): string => (str.length < 2 ? leadingZero(`0${str}`) : str)
+        if (this.a != -1) {
+            return `#${leadingZero(this.r.toString(16))}${leadingZero(this.g.toString(16))}${leadingZero(this.b.toString(16))}${leadingZero(this.a.toString(16))}`
         }
-        return `#${this.r.toString(16)}${this.g.toString(16)}${this.b.toString(16)}`
+        return `#${leadingZero(this.r.toString(16))}${leadingZero(this.g.toString(16))}${leadingZero(this.b.toString(16))}`
     }
 
     copy() {
@@ -518,7 +519,7 @@ export class FColorDirectory {
 
     randomColor() {
         let ths = this;
-        let colorName = Object.keys(this).filter((item: string)=>(ths[item] instanceof FColorSwath)).random()
+        let colorName = Object.keys(this).filter((item: string) => (ths[item] instanceof FColorSwath)).random()
         return (this[colorName] as FColorSwath).randomColor()
     }
     proceduralCss: string[] = []
@@ -529,10 +530,10 @@ export class FColorDirectory {
         }
     }
     updateProceduralCss() {
-        if(this.cssElement == null){return}
+        if (this.cssElement == null) { return }
         this.cssElement.innerHTML = this.proceduralCss.join('\n');
     }
-    constructor() { 
+    constructor() {
         //          0  1   2   3   4   5   6   7   8   9   10  11
         let dmcs = [0, 15, 20, 25, 30, 34, 38, 42, 47, 54, 60, 70];
         let getDarkModeColor = (i) => {
@@ -596,7 +597,7 @@ export class FColorDirectory {
                             break;
                         case "600":
                             englishLabel = "darken1";
-                            break; 
+                            break;
                         case "700":
                             englishLabel = "darken2";
                             break;
@@ -617,7 +618,7 @@ export class FColorDirectory {
                             break;
                         case "a700":
                             englishLabel = "accent4";
-                            break; 
+                            break;
                         default:
                             englishLabel = colorLabels[j];
                     }
@@ -633,9 +634,9 @@ export class FColorDirectory {
             }
         }
         let ths = this;
-//         this.darkMode.forEach((darkColor)=>{
-// ths.addCss(`.${darkColor.hoverCssClass}:hover {background-color: ${darkColor.toRealHex()} !important}`)
-//         })
+        //         this.darkMode.forEach((darkColor)=>{
+        // ths.addCss(`.${darkColor.hoverCssClass}:hover {background-color: ${darkColor.toRealHex()} !important}`)
+        //         })
         this.updateProceduralCss();
     }
     toJson(colorMode: ColorMode = 'hexString') {
@@ -698,10 +699,10 @@ declare global {
     var fColor: FColorDirectory
 }
 export function ensureFColor() {
-    try{
-    if (typeof window != 'undefined' && typeof window['fColor'] == 'undefined') {
-        window['fColor'] = new FColorDirectory()
-    }
-}catch(err){}
+    try {
+        if (typeof window != 'undefined' && typeof window['fColor'] == 'undefined') {
+            window['fColor'] = new FColorDirectory()
+        }
+    } catch (err) { }
 }
 ensureFColor()

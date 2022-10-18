@@ -316,7 +316,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                     console.log(`No canvas element for event`, ev);
                     return;
                 }
-                console.log(ev.key)
+                // console.log(ev.key)
                 let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
                 this._pressedKeys.set(key, true);
                 if (key == PunctuationCharacter.BackTick) {
@@ -335,7 +335,7 @@ export class BristolBoard<RootElementType extends UIElement> extends React.Compo
                     console.log(`No canvas element for event`, ev);
                     return;
                 }
-                console.log(ev.key)
+                // console.log(ev.key)
                 let key: KeyboardKey | null = StringToKeyboardInputKey(ev.key);
                 this._pressedKeys.set(key, false);
             }
